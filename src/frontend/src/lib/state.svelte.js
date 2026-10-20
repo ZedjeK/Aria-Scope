@@ -11,6 +11,7 @@ export const app = $state({
   mode: 'taille', // "taille" (réelle) ou "disque" (place occupée)
   tri: { colonne: '', inverse: false }, // colonne vide : la taille du mode
   carte: true, // treemap affichée à côté de l'arbre
+  selection: null, // partagée entre l'arbre et la carte (voir selection.js)
   erreur: '',
   loadError: '',
 })
@@ -55,6 +56,7 @@ export function suivre() {
 
 export async function lancer(chemin) {
   app.erreur = ''
+  app.selection = null
   try {
     await call('Lancer', chemin)
     app.page = 'analyse'

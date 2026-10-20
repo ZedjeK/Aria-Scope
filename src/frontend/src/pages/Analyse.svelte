@@ -87,9 +87,9 @@
 
       {#key gen}
         <div class="vue" class:avec-carte={app.carte}>
-          <div class="col-arbre"><Arbre {gen} mode={app.mode} bind:tri={app.tri} /></div>
+          <div class="col-arbre"><Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} /></div>
           {#if app.carte}
-            <div class="col-carte"><Carte {gen} mode={app.mode} /></div>
+            <div class="col-carte"><Carte {gen} mode={app.mode} bind:selection={app.selection} /></div>
           {/if}
         </div>
       {/key}

@@ -1,11 +1,13 @@
 <script>
   // Arborescence de l'analyse : chaque dossier se déplie à la demande, ses
   // enfants sont demandés au moteur Go, déjà triés selon la colonne choisie.
+  import { tick, untrack } from 'svelte'
   import Icon from './Icon.svelte'
+  import { selectionDe, estLigneChoisie } from './selection.js'
   import { call, message, montrer } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, dateCourte, dateLongue } from './format.js'
 
-  let { gen, mode, tri = $bindable({ colonne: '', inverse: false }) } = $props()
+  let { gen, mode, tri = $bindable({ colonne: '', inverse: false }), selection = $bindable(null) } = $props()
 
   let racine = $state(null)
   let erreurRacine = $state('')
@@ -31,6 +33,48 @@
       n.chargement = false
     }
   }
+
+  async function ouvrir(n) {
+    if (!n.e.ouvrable) return
+    n.ouvert = true
+    if (!n.enfants && !n.chargement) await charger(n)
+  }
+
+  // ---------- Sélection, partagée avec la carte ----------
+
+  const choisir = (n) => (selection = selectionDe(n.e, 'arbre'))
+
+  // Choisi sur la carte : on déplie le chemin jusqu'à la ligne et on la montre.
+  async function reveler(sel) {
+    let fil
+    try {
+      fil = (await call('Fil', gen, sel.id)) ?? []
+    } catch {
+      return
+    }
+    let n = racine
+    for (const etape of fil.slice(1)) {
+      await ouvrir(n)
+      const c = n.enfants?.find((c) => c.e.type === 'dossier' && c.e.id === etape.id)
+      if (!c) return // au-delà des 300 premiers : regroupé dans « autres »
+      n = c
+    }
+    if (sel.type !== 'dossier') {
+      await ouvrir(n)
+      if (sel.type === 'fichier') {
+        const f = n.enfants?.find((c) => c.e.type === 'fichiers')
+        if (f) await ouvrir(f)
+      }
+    }
+    await tick()
+    document.querySelector('.arbre .ligne.choisie')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+
+  $effect(() => {
+    const sel = selection
+    const r = racine
+    if (sel?.origine === 'carte' && r) untrack(() => reveler(sel))
+  })
 
   function basculer(n) {
     if (!n.e.ouvrable) return
@@ -71,7 +115,7 @@
       .catch((err) => (erreurRacine = message(err)))
   })
 
-  let ordreAffiche = `${mode}|${tri.colonne}|${tri.inverse}`
+  let ordreAffiche = untrack(() => `${mode}|${tri.colonne}|${tri.inverse}`) // ordre de départ
   $effect(() => {
     const ordre = `${mode}|${tri.colonne}|${tri.inverse}`
     if (ordre !== ordreAffiche) {
@@ -163,17 +207,22 @@
       {:else}
         {@const e = n.e}
         {@const p = parent ? pourcent(valeur(e), valeur(parent.e)) : 100}
-        <div class="ligne" class:racine={prof === 0} class:attenue={e.type === 'reste'} role="row" aria-level={prof + 1} aria-expanded={e.ouvrable ? n.ouvert : undefined} style:--prof={prof}>
-          <button class="c-nom" role="gridcell" disabled={!e.ouvrable} onclick={() => basculer(n)} title={prof === 0 ? e.nom : undefined}>
-            <span class="pli" class:ouvert={n.ouvert} class:invisible={!e.ouvrable}><Icon name="chevron" size={14} /></span>
-            <span class="type t-{e.type}"><Icon name={icone[e.type]} size={16} /></span>
-            <span class="nom" class:italique={e.type === 'fichiers' || e.type === 'reste'}>{libelle(e)}</span>
-            {#if e.erreurs > 0 && e.type === 'dossier'}
-              <span class="chip warn" title="{nombre(e.erreurs)} dossier{e.erreurs > 1 ? 's' : ''} illisible{e.erreurs > 1 ? 's' : ''} dans cette branche">
-                <Icon name="warn" size={11} />{nombre(e.erreurs)}
-              </span>
-            {/if}
-          </button>
+        {@const choisie = estLigneChoisie(selection, e)}
+        <div class="ligne" class:racine={prof === 0} class:attenue={e.type === 'reste'} class:choisie role="row" aria-level={prof + 1} aria-expanded={e.ouvrable ? n.ouvert : undefined} aria-selected={choisie} style:--prof={prof}>
+          <div class="c-nom" role="gridcell">
+            <button class="pli" class:ouvert={n.ouvert} class:invisible={!e.ouvrable} tabindex={e.ouvrable ? 0 : -1} onclick={() => basculer(n)} aria-label={n.ouvert ? 'Replier' : 'Déplier'}>
+              <Icon name="chevron" size={14} />
+            </button>
+            <button class="nom-btn" onclick={() => choisir(n)} ondblclick={() => basculer(n)} title={prof === 0 ? e.nom : e.type === 'reste' ? undefined : 'Clic : sélectionner · double-clic : déplier'}>
+              <span class="type t-{e.type}"><Icon name={icone[e.type]} size={16} /></span>
+              <span class="nom" class:italique={e.type === 'fichiers' || e.type === 'reste'}>{libelle(e)}</span>
+              {#if e.erreurs > 0 && e.type === 'dossier'}
+                <span class="chip warn" title="{nombre(e.erreurs)} dossier{e.erreurs > 1 ? 's' : ''} illisible{e.erreurs > 1 ? 's' : ''} dans cette branche">
+                  <Icon name="warn" size={11} />{nombre(e.erreurs)}
+                </span>
+              {/if}
+            </button>
+          </div>
           <span class="num c-taille" role="gridcell" class:actif={mode === 'taille'}>{octets(e.taille)}</span>
           <span class="num c-disque" role="gridcell" class:actif={mode === 'disque'}>{octets(e.disque)}</span>
           <span class="c-pct" role="gridcell">
@@ -292,14 +341,38 @@
     font: inherit;
     text-align: left;
   }
-  button.c-nom:disabled {
-    cursor: default;
+  .nom-btn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    align-self: stretch;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
   }
   .pli {
     flex: none;
     display: flex;
+    padding: 2px;
+    border: none;
+    background: none;
     color: var(--faint);
     transition: transform 0.15s;
+  }
+  .pli:hover {
+    color: var(--text);
+  }
+  .ligne.choisie {
+    background: color-mix(in srgb, var(--action) 10%, transparent);
+    box-shadow: inset 3px 0 0 var(--action);
+  }
+  .ligne.choisie:hover {
+    background: color-mix(in srgb, var(--action) 14%, transparent);
   }
   .pli.ouvert {
     transform: rotate(90deg);

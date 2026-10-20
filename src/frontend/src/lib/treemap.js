@@ -90,7 +90,8 @@ const MARGE = 2
 export function disposer(racine, largeur, hauteur) {
   const tuiles = []
   const poser = (bloc, x, y, w, h, prof, teinte) => {
-    const enfants = (bloc.enfants ?? []).filter((e) => e.valeur > 0)
+    // Tri indispensable : la ligne « autres » arrive en dernier mais peut peser lourd.
+    const enfants = (bloc.enfants ?? []).filter((e) => e.valeur > 0).sort((a, b) => b.valeur - a.valeur)
     const rects = squarifier(enfants.map((e) => e.valeur), x, y, w, h)
     enfants.forEach((e, i) => {
       const r = rects[i]

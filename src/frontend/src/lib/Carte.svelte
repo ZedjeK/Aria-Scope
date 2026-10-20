@@ -1,12 +1,14 @@
 <script>
   // Treemap néon : chaque rectangle a une surface proportionnelle à sa taille.
   // Survol : le détail ; clic : sélection ; double-clic : on plonge dans le dossier.
+  import { untrack } from 'svelte'
   import Icon from './Icon.svelte'
+  import { selectionDe, estBlocChoisi } from './selection.js'
   import { call, message, montrer } from './state.svelte.js'
   import { octets, nombre, pourcentTexte, pourcent } from './format.js'
   import { disposer } from './treemap.js'
 
-  let { gen, mode } = $props()
+  let { gen, mode, selection = $bindable(null) } = $props()
 
   let racineId = $state(0) // dossier affiché par la carte
   let donnees = $state(null)
@@ -16,7 +18,6 @@
   let largeur = $state(0)
   let hauteur = $state(0)
   let survol = $state(null) // { tuile, x, y }
-  let selection = $state(null) // tuile sélectionnée
 
   // Nouvelle analyse : on repart de la racine.
   $effect(() => {
@@ -36,13 +37,39 @@
         if (g !== gen || id !== racineId || m !== mode) return
         donnees = c
         fil = f ?? []
-        selection = null
       })
       .catch((err) => (erreur = message(err)))
       .finally(() => (chargement = false))
   })
 
   const tuiles = $derived(donnees && largeur > 0 && hauteur > 0 ? disposer(donnees, largeur, hauteur) : [])
+  const tuileChoisie = $derived(selection ? (tuiles.find((t) => estBlocChoisi(selection, t.bloc)) ?? null) : null)
+
+  // Choisi dans l'arbre mais absent de la carte : on recadre sur son dossier
+  // parent (ou, pour des fichiers, sur le dossier qui les contient).
+  let dejaRecadre = ''
+  $effect(() => {
+    const sel = selection
+    const ts = tuiles
+    if (!sel || sel.origine !== 'arbre' || !donnees || chargement) return
+    if (ts.some((t) => estBlocChoisi(sel, t.bloc))) return
+    if (sel.type === 'dossier' && sel.id === racineId) return // c'est le dossier affiché
+    const cle = `${sel.type}:${sel.id}`
+    if (cle === dejaRecadre) return // trop petit pour être dessiné même là : tant pis
+    dejaRecadre = cle
+    untrack(() => recadrer(sel))
+  })
+
+  async function recadrer(sel) {
+    if (sel.type !== 'dossier') {
+      racineId = sel.id
+      return
+    }
+    try {
+      const f = (await call('Fil', gen, sel.id)) ?? []
+      if (f.length >= 2) racineId = f[f.length - 2].id
+    } catch {}
+  }
 
   const nomBloc = (b) =>
     b.type === 'fichiers'
@@ -75,13 +102,15 @@
   }
 
   function cliquer(evt) {
-    selection = tuileDe(evt)
+    const t = tuileDe(evt)
+    if (t && t.bloc.type !== 'reste') selection = selectionDe(t.bloc, 'carte')
   }
 
   function plonger(evt) {
     const t = tuileDe(evt)
     if (t?.bloc.type === 'dossier' && t.bloc.ouvrable) {
       survol = null
+      selection = selectionDe(t.bloc, 'carte')
       racineId = t.bloc.id
     }
   }
@@ -93,7 +122,8 @@
       if (selection && evt.key === 'Escape') selection = null
       else remonter()
     }
-    if (evt.key === 'Enter' && selection?.bloc.type === 'dossier' && selection.bloc.ouvrable) racineId = selection.bloc.id
+    const b = tuileChoisie?.bloc
+    if (evt.key === 'Enter' && b?.type === 'dossier' && b.ouvrable) racineId = b.id
   }
 
   // Bulle : on la garde dans le cadre.
@@ -117,6 +147,7 @@
     {#if chargement}<span class="hint">…</span>{/if}
   </div>
 
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div class="zone" bind:clientWidth={largeur} bind:clientHeight={hauteur} tabindex="0" role="application" aria-label="Treemap : clic pour sélectionner, double-clic ou Entrée pour plonger, Retour arrière pour remonter" onkeydown={clavier} onmousemove={bouger} onmouseleave={() => (survol = null)} onclick={cliquer} ondblclick={plonger}>
     {#if erreur}
@@ -146,8 +177,9 @@
             {/if}
           {/if}
         {/each}
-        {#if selection}
-          <rect class="selection" x={selection.x + 1} y={selection.y + 1} width={Math.max(0, selection.w - 2)} height={Math.max(0, selection.h - 2)} rx="2" />
+        {#if tuileChoisie}
+          {@const s = tuileChoisie}
+          <rect class="selection" x={s.x + 1} y={s.y + 1} width={Math.max(0, s.w - 2)} height={Math.max(0, s.h - 2)} rx="2" />
         {/if}
       </svg>
 
@@ -165,14 +197,15 @@
   </div>
 
   <div class="pied">
-    {#if selection}
-      {@const b = selection.bloc}
-      <span class="pastille" style:background={selection.couleur}></span>
+    {#if tuileChoisie}
+      {@const b = tuileChoisie.bloc}
+      <span class="pastille" style:background={tuileChoisie.couleur}></span>
       <span class="sel-nom">{nomBloc(b)}</span>
       <span class="sel-taille">{octets(b.valeur)} · {pourcentTexte(pourcent(b.valeur, donnees.valeur))}</span>
-      {#if b.type !== 'reste'}
-        <button class="ouvrir" onclick={() => montrer(gen, b.id)} title="Montrer dans l'Explorateur" aria-label="Montrer dans l'Explorateur"><Icon name="external" size={15} /></button>
-      {/if}
+      <button class="ouvrir" onclick={() => montrer(gen, b.id)} title="Montrer dans l'Explorateur" aria-label="Montrer dans l'Explorateur"><Icon name="external" size={15} /></button>
+    {:else if selection}
+      <span class="sel-nom">{selection.type === 'dossier' && selection.id === racineId ? `${fil.at(-1)?.nom ?? ''} (dossier affiché)` : selection.nom || 'Sélection'}</span>
+      <span class="hint sel-taille">trop petit pour la carte</span>
     {:else}
       <span class="hint">Clic : sélection · double-clic : plonger · ⌫ : remonter</span>
     {/if}
