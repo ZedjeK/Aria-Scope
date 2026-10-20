@@ -78,6 +78,7 @@ type Scan struct {
 	fichiers, dossiers, taille, disque, erreurs, liens atomic.Int64
 	courant                                            atomic.Pointer[string]
 	gros                                               palmares
+	types                                              statsTypes
 
 	mu      sync.RWMutex
 	etat    string
@@ -162,6 +163,7 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 	s.courant.Store(&chemin)
 
 	var sousDossiers []*Dossier
+	var exts map[string]*compteur // fichiers de ce dossier par extension
 	err := listerDossier(chemin, func(e entree) {
 		switch {
 		case e.Lien:
@@ -178,12 +180,23 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 			s.taille.Add(e.Taille)
 			s.disque.Add(e.Disque)
 			s.gros.proposer(d, e)
+			if exts == nil {
+				exts = map[string]*compteur{}
+			}
+			ext := extension(e.Nom)
+			c := exts[ext]
+			if c == nil {
+				c = &compteur{}
+				exts[ext] = c
+			}
+			c.ajouter(e)
 		}
 	})
 	if err != nil {
 		d.illisible = true
 		s.erreurs.Add(1)
 	}
+	s.types.fusionner(exts)
 	d.enfants = sousDossiers
 	s.dossiers.Add(int64(len(sousDossiers)))
 
