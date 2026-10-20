@@ -9,6 +9,7 @@ export const app = $state({
   etat: null, // { version, gen, scan, attendu, parallelisme }
   volumes: [],
   mode: 'taille', // "taille" (réelle) ou "disque" (place occupée)
+  tri: { colonne: '', inverse: false }, // colonne vide : la taille du mode
   erreur: '',
   loadError: '',
 })

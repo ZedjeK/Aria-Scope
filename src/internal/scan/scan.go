@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -307,23 +306,9 @@ func (s *Scan) RacineEntree() (Entree, error) {
 	return entreeDossier(d), nil
 }
 
-func valeur(e Entree, mode string) int64 {
-	if mode == ModeDisque {
-		return e.Disque
-	}
-	return e.Taille
-}
-
-// trier classe du plus lourd au plus léger, puis garde les limite premiers et
-// regroupe les autres dans une ligne « reste ».
-func trier(lignes []Entree, mode string, limite int, parent int32) []Entree {
-	sort.SliceStable(lignes, func(i, j int) bool {
-		vi, vj := valeur(lignes[i], mode), valeur(lignes[j], mode)
-		if vi != vj {
-			return vi > vj
-		}
-		return lignes[i].Nom < lignes[j].Nom
-	})
+// limiter garde les limite premières lignes (déjà triées) et regroupe les
+// autres dans une ligne « reste ».
+func limiter(lignes []Entree, limite int, parent int32) []Entree {
 	if limite <= 0 || len(lignes) <= limite {
 		return lignes
 	}
@@ -338,8 +323,8 @@ func trier(lignes []Entree, mode string, limite int, parent int32) []Entree {
 }
 
 // Enfants renvoie les sous-dossiers de id, plus une ligne « fichiers » pour
-// les fichiers posés directement dedans, du plus lourd au plus léger.
-func (s *Scan) Enfants(id int32, mode string, limite int) ([]Entree, error) {
+// les fichiers posés directement dedans, triés selon t.
+func (s *Scan) Enfants(id int32, mode string, t Tri, limite int) ([]Entree, error) {
 	d, err := s.noeud(id)
 	if err != nil {
 		return nil, err
@@ -355,12 +340,13 @@ func (s *Scan) Enfants(id int32, mode string, limite int) ([]Entree, error) {
 			Fichiers: d.nFichiers, Ouvrable: true,
 		})
 	}
-	return trier(lignes, mode, limite, d.id), nil
+	t.trier(lignes, mode)
+	return limiter(lignes, limite, d.id), nil
 }
 
 // Fichiers relit le dossier id sur le disque et renvoie ses fichiers.
 // La liste reflète donc le disque au moment du clic, pas au moment du scan.
-func (s *Scan) Fichiers(id int32, mode string, limite int) ([]Entree, error) {
+func (s *Scan) Fichiers(id int32, mode string, t Tri, limite int) ([]Entree, error) {
 	if _, err := s.noeud(id); err != nil {
 		return nil, err
 	}
@@ -378,7 +364,8 @@ func (s *Scan) Fichiers(id int32, mode string, limite int) ([]Entree, error) {
 	if err != nil {
 		return nil, err
 	}
-	return trier(lignes, mode, limite, id), nil
+	t.trier(lignes, mode)
+	return limiter(lignes, limite, id), nil
 }
 
 // Chemin reconstruit le chemin complet du dossier id.

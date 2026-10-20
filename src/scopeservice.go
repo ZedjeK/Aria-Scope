@@ -112,22 +112,23 @@ func (s *ScopeService) Racine(gen int) (scan.Entree, error) {
 	return sc.RacineEntree()
 }
 
-// Enfants renvoie le contenu d'un dossier, trié selon mode ("taille" ou "disque").
-func (s *ScopeService) Enfants(gen int, id int32, mode string) ([]scan.Entree, error) {
+// Enfants renvoie le contenu d'un dossier. mode choisit la taille mesurée
+// ("taille" ou "disque"), tri la colonne et le sens.
+func (s *ScopeService) Enfants(gen int, id int32, mode string, tri scan.Tri) ([]scan.Entree, error) {
 	sc, err := s.courant(gen)
 	if err != nil {
 		return nil, err
 	}
-	return sc.Enfants(id, mode, limiteLignes)
+	return sc.Enfants(id, mode, tri, limiteLignes)
 }
 
 // Fichiers renvoie les fichiers posés directement dans un dossier.
-func (s *ScopeService) Fichiers(gen int, id int32, mode string) ([]scan.Entree, error) {
+func (s *ScopeService) Fichiers(gen int, id int32, mode string, tri scan.Tri) ([]scan.Entree, error) {
 	sc, err := s.courant(gen)
 	if err != nil {
 		return nil, err
 	}
-	return sc.Fichiers(id, mode, limiteLignes)
+	return sc.Fichiers(id, mode, tri, limiteLignes)
 }
 
 // Montrer ouvre l'Explorateur sur un dossier, ou sur un fichier (sélectionné)

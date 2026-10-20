@@ -80,7 +80,7 @@ func TestTotaux(t *testing.T) {
 func TestEnfantsTriesEtFichiers(t *testing.T) {
 	s := scanner(t, arbre(t))
 
-	enf, err := s.Enfants(0, ModeTaille, 0)
+	enf, err := s.Enfants(0, ModeTaille, Tri{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestEnfantsTriesEtFichiers(t *testing.T) {
 	}
 
 	// Les fichiers posés dans « gros », relus sur le disque
-	fich, err := s.Fichiers(gros.ID, ModeTaille, 0)
+	fich, err := s.Fichiers(gros.ID, ModeTaille, Tri{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestLimiteRegroupeLeReste(t *testing.T) {
 	}
 	s := scanner(t, r)
 
-	enf, err := s.Enfants(0, ModeTaille, 3)
+	enf, err := s.Enfants(0, ModeTaille, Tri{}, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestArretGardeLePartiel(t *testing.T) {
 	if e := s.Progression().Etat; e != Arrete && e != Fini {
 		t.Fatalf("état = %q", e)
 	}
-	if _, err := s.Enfants(0, ModeTaille, 0); err != nil {
+	if _, err := s.Enfants(0, ModeTaille, Tri{}, 0); err != nil {
 		t.Fatalf("le résultat partiel doit rester consultable : %v", err)
 	}
 }
@@ -210,14 +210,14 @@ func TestErreurs(t *testing.T) {
 		t.Error("dossier inexistant accepté")
 	}
 	s := scanner(t, r)
-	if _, err := s.Enfants(999, ModeTaille, 0); err == nil {
+	if _, err := s.Enfants(999, ModeTaille, Tri{}, 0); err == nil {
 		t.Error("id inconnu accepté")
 	}
 }
 
 func TestModeDisque(t *testing.T) {
 	s := scanner(t, arbre(t))
-	enf, err := s.Enfants(0, ModeDisque, 0)
+	enf, err := s.Enfants(0, ModeDisque, Tri{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

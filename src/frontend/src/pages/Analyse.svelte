@@ -84,7 +84,7 @@
       {/if}
 
       {#key gen}
-        <Arbre {gen} mode={app.mode} />
+        <Arbre {gen} mode={app.mode} bind:tri={app.tri} />
       {/key}
     {/if}
   {/if}

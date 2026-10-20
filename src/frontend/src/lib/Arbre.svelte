@@ -1,11 +1,11 @@
 <script>
   // Arborescence de l'analyse : chaque dossier se déplie à la demande, ses
-  // enfants sont demandés au moteur Go, déjà triés du plus lourd au plus léger.
+  // enfants sont demandés au moteur Go, déjà triés selon la colonne choisie.
   import Icon from './Icon.svelte'
   import { call, message, montrer } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
 
-  let { gen, mode } = $props()
+  let { gen, mode, tri = $bindable({ colonne: '', inverse: false }) } = $props()
 
   let racine = $state(null)
   let erreurRacine = $state('')
@@ -17,7 +17,7 @@
 
   async function lire(n) {
     const methode = n.e.type === 'fichiers' ? 'Fichiers' : 'Enfants'
-    return (await call(methode, gen, n.e.id, mode)) ?? []
+    return (await call(methode, gen, n.e.id, mode, { colonne: tri.colonne, inverse: tri.inverse })) ?? []
   }
 
   async function charger(n) {
@@ -38,7 +38,8 @@
     if (n.ouvert && !n.enfants && !n.chargement) charger(n)
   }
 
-  // Nouveau mode de mesure : on retrie tout ce qui est déplié, sans rien refermer.
+  // Nouveau mode de mesure ou nouveau tri : on retrie tout ce qui est déplié,
+  // sans rien refermer.
   async function recharger(n) {
     if (!n.ouvert || !n.enfants) return
     const anciens = new Map(n.enfants.map((c) => [cle(c.e), c]))
@@ -70,13 +71,29 @@
       .catch((err) => (erreurRacine = message(err)))
   })
 
-  let modeAffiche = mode
+  let ordreAffiche = `${mode}|${tri.colonne}|${tri.inverse}`
   $effect(() => {
-    if (mode !== modeAffiche) {
-      modeAffiche = mode
+    const ordre = `${mode}|${tri.colonne}|${tri.inverse}`
+    if (ordre !== ordreAffiche) {
+      ordreAffiche = ordre
       if (racine) recharger(racine)
     }
   })
+
+  // ---------- Tri par colonne ----------
+
+  // La colonne réellement utilisée : « % du parent » trie sur la taille du mode.
+  const effective = $derived(tri.colonne || (mode === 'disque' ? 'disque' : 'taille'))
+  const decroissant = $derived((effective !== 'nom') !== tri.inverse)
+
+  // Premier clic : la colonne, dans son sens naturel ; clic suivant : on inverse.
+  function trierPar(colonne) {
+    const cible = colonne || (mode === 'disque' ? 'disque' : 'taille')
+    if (cible === effective && colonne === tri.colonne) tri = { colonne, inverse: !tri.inverse }
+    else tri = { colonne, inverse: false }
+  }
+
+  const triParTaille = $derived(decroissant && (effective === 'taille' || effective === 'disque'))
 
   const lignes = $derived.by(() => {
     const out = []
@@ -96,7 +113,7 @@
       case 'fichiers':
         return `${nombre(e.fichiers)} fichier${e.fichiers > 1 ? 's' : ''} dans ce dossier`
       case 'reste':
-        return `${nombre(e.nombre)} autre${e.nombre > 1 ? 's' : ''} élément${e.nombre > 1 ? 's' : ''}, plus légers`
+        return `${nombre(e.nombre)} autre${e.nombre > 1 ? 's' : ''} élément${e.nombre > 1 ? 's' : ''}${triParTaille ? ', plus légers' : ''}`
       default:
         return e.nom
     }
@@ -118,12 +135,20 @@
 {:else}
   <div class="arbre" role="treegrid" aria-label="Contenu analysé">
     <div class="ligne entete" role="row">
-      <span role="columnheader">Nom</span>
-      <span role="columnheader" class="num c-taille" class:actif={mode === 'taille'}>Taille</span>
-      <span role="columnheader" class="num c-disque" class:actif={mode === 'disque'}>Sur disque</span>
-      <span role="columnheader" class="c-pct">% du parent</span>
-      <span role="columnheader" class="num c-fichiers">Fichiers</span>
-      <span role="columnheader" class="num c-dossiers">Dossiers</span>
+      {#snippet entete(colonne, texte, classe = '')}
+        {@const actifTri = colonne === tri.colonne}
+        <span role="columnheader" class={classe} aria-sort={actifTri ? (decroissant ? 'descending' : 'ascending') : undefined}>
+          <button class="tri" class:trie={actifTri} onclick={() => trierPar(colonne)} title="Trier par {texte.toLowerCase()}">
+            {texte}<span class="fleche" aria-hidden="true">{actifTri ? (decroissant ? '▼' : '▲') : ''}</span>
+          </button>
+        </span>
+      {/snippet}
+      {@render entete('nom', 'Nom', 'c-entete-nom')}
+      {@render entete('taille', 'Taille', `num c-taille${mode === 'taille' ? ' actif' : ''}`)}
+      {@render entete('disque', 'Sur disque', `num c-disque${mode === 'disque' ? ' actif' : ''}`)}
+      {@render entete('', '% du parent', 'c-pct')}
+      {@render entete('fichiers', 'Fichiers', 'num c-fichiers')}
+      {@render entete('dossiers', 'Dossiers', 'num c-dossiers')}
       <span role="columnheader" class="c-act"><span class="sr">Actions</span></span>
     </div>
 
@@ -202,8 +227,37 @@
     text-transform: uppercase;
     color: var(--faint);
   }
-  .entete > span:first-child {
+  .tri {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+  }
+  .tri:hover {
+    color: var(--text);
+  }
+  .tri.trie {
+    color: var(--action);
+  }
+  .fleche {
+    display: inline-block;
+    min-width: 8px;
+    font-size: 9px;
+  }
+  .c-entete-nom {
     padding-left: 14px;
+  }
+  .entete .num {
+    display: flex;
+    justify-content: flex-end;
   }
   .entete .actif {
     color: var(--accent);
