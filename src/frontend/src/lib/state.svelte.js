@@ -10,6 +10,7 @@ export const app = $state({
   volumes: [],
   mode: 'taille', // "taille" (réelle) ou "disque" (place occupée)
   tri: { colonne: '', inverse: false }, // colonne vide : la taille du mode
+  carte: true, // treemap affichée à côté de l'arbre
   erreur: '',
   loadError: '',
 })

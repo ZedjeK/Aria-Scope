@@ -34,6 +34,10 @@
     <rect x="6" y="6" width="12" height="12" rx="1.5" />
   {:else if name === 'refresh'}
     <path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" />
+  {:else if name === 'map'}
+    <rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M11 4v16" /><path d="M11 13h10" /><path d="M16 13v7" />
+  {:else if name === 'up'}
+    <path d="M12 19V5" /><path d="M6 11l6-6 6 6" />
   {:else if name === 'warn'}
     <path d="M12 3l10 18H2z" /><path d="M12 10v5" /><path d="M12 18h.01" />
   {/if}

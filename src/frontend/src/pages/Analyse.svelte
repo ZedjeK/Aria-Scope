@@ -1,6 +1,7 @@
 <script>
   import Icon from '../lib/Icon.svelte'
   import Arbre from '../lib/Arbre.svelte'
+  import Carte from '../lib/Carte.svelte'
   import { app, lancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
 
@@ -34,6 +35,7 @@
         {#if enCours}
           <button class="btn-primary" onclick={arreter}><Icon name="stop" size={16} /> Arrêter</button>
         {:else}
+          <button class="btn-ghost" class:on={app.carte} aria-pressed={app.carte} onclick={() => (app.carte = !app.carte)} title={app.carte ? 'Masquer la carte' : 'Afficher la carte'}><Icon name="map" size={16} /> Carte</button>
           <button class="btn-ghost" onclick={() => lancer(scan.racine)}><Icon name="refresh" size={16} /> Relancer</button>
           <button class="btn-ghost" onclick={() => (app.page = 'accueil')}><Icon name="scope" size={16} /> Nouvelle analyse</button>
         {/if}
@@ -84,7 +86,12 @@
       {/if}
 
       {#key gen}
-        <Arbre {gen} mode={app.mode} bind:tri={app.tri} />
+        <div class="vue" class:avec-carte={app.carte}>
+          <div class="col-arbre"><Arbre {gen} mode={app.mode} bind:tri={app.tri} /></div>
+          {#if app.carte}
+            <div class="col-carte"><Carte {gen} mode={app.mode} /></div>
+          {/if}
+        </div>
       {/key}
     {/if}
   {/if}
@@ -93,6 +100,34 @@
 <style>
   .vide {
     align-items: flex-start;
+  }
+  .btn-ghost.on {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    color: var(--accent);
+  }
+
+  /* Arbre et carte : côte à côte quand il y a la place, la carte au-dessus sinon. */
+  .vue {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .col-carte {
+    order: -1;
+    height: 380px;
+  }
+  @container (min-width: 900px) {
+    .vue.avec-carte {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    }
+    .col-carte {
+      order: 0;
+      position: sticky;
+      top: 0;
+      height: min(calc(100vh - 60px), 820px);
+    }
   }
   .actions button {
     display: inline-flex;

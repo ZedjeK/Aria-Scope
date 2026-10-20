@@ -425,11 +425,12 @@
     .ligne {
       grid-template-columns: minmax(0, 1fr) 92px 120px 36px;
     }
-    .c-fichiers,
-    .c-dossiers,
-    .c-modif,
-    .c-taille:not(.actif),
-    .c-disque:not(.actif) {
+    /* « .ligne > » : plus spécifique que les cellules d'en-tête, qui sont en flex */
+    .ligne > .c-fichiers,
+    .ligne > .c-dossiers,
+    .ligne > .c-modif,
+    .ligne > .c-taille:not(.actif),
+    .ligne > .c-disque:not(.actif) {
       display: none;
     }
   }
