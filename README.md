@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.png" width="160" alt="Logo d'Aria Scope : un A néon glitché avec un viseur orange">
+  <img src="docs/logo.png" width="160" alt="Logo d'Aria Scope : un A néon glitché avec des jumelles orange">
 </p>
 
 <h1 align="center">Aria Scope</h1>

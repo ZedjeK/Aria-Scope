@@ -1,6 +1,6 @@
 <script>
-  // Logo d'Aria Scope : le A glitché de la famille Aria, avec le viseur orange.
-  // Pendant une analyse, le viseur pulse. Chaque instance a ses propres
+  // Logo d'Aria Scope : le A glitché de la famille Aria, avec les jumelles orange.
+  // Pendant une analyse, les jumelles balaient l'horizon. Chaque instance a ses propres
   // identifiants SVG (découpes, filtres).
   let { size = 36, actif = false, label = '' } = $props()
 
@@ -52,10 +52,17 @@
       <g clip-path="url(#{ref('t')})" fill="none" stroke="#FFFFFF" stroke-width="4"><use href="#{ref('a')}" /></g>
     </g>
   </g>
-  <g class="viseur" filter="url(#{ref('g')})" stroke="#FF8A1F" stroke-linecap="round" fill="none">
-    <circle cx="80" cy="106" r="13" stroke-width="3" />
-    <path d="M80,88 v9 M80,115 v9 M62,106 h9 M89,106 h9" stroke-width="2.6" />
-    <circle cx="80" cy="106" r="3.4" fill="#FF8A1F" stroke="none" />
+  <g class="jumelles" filter="url(#{ref('g')})">
+    <g transform="translate(80 104) scale(0.95) translate(-80 -104)">
+      <g fill="#FF8A1F">
+        <rect x="66" y="87" width="8" height="7" rx="1.5" /><path d="M64,94 h12 l2,6 v17 q0,4 -4,4 h-12 q-4,0 -4,-4 v-13 z" />
+        <g transform="translate(160 0) scale(-1 1)"><rect x="66" y="87" width="8" height="7" rx="1.5" /><path d="M64,94 h12 l2,6 v17 q0,4 -4,4 h-12 q-4,0 -4,-4 v-13 z" /></g>
+        <rect x="76" y="97" width="8" height="10" rx="2" />
+      </g>
+      <g fill="#030812" opacity="0.7">
+        <ellipse cx="68" cy="118" rx="6" ry="2.2" /><ellipse cx="92" cy="118" rx="6" ry="2.2" /><circle cx="80" cy="102" r="1.8" />
+      </g>
+    </g>
   </g>
 </svg>
 
@@ -64,21 +71,23 @@
     display: block;
     flex: none;
   }
-  .viseur {
-    transform-origin: 80px 106px;
+  .jumelles {
+    transform-origin: 80px 104px;
   }
-  .actif .viseur {
-    animation: viser 1.6s ease-in-out infinite;
+  /* Analyse en cours : les jumelles balaient de gauche à droite */
+  .actif .jumelles {
+    animation: balayer 2.4s ease-in-out infinite;
   }
-  @keyframes viser {
+  @keyframes balayer {
     0%,
     100% {
-      transform: scale(1) rotate(0deg);
-      opacity: 1;
+      transform: translateX(0) rotate(0deg);
     }
-    50% {
-      transform: scale(1.12) rotate(45deg);
-      opacity: 0.75;
+    25% {
+      transform: translateX(-4px) rotate(-6deg);
+    }
+    75% {
+      transform: translateX(4px) rotate(6deg);
     }
   }
 </style>

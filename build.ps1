@@ -6,7 +6,7 @@
 # Prérequis : Go 1.26 ou plus, Node.js LTS.
 
 param(
-    [string] $Version = '0.1.0'
+    [string] $Version = '0.1.1'
 )
 
 $ErrorActionPreference = 'Stop'
