@@ -7,6 +7,7 @@ type entree struct {
 	Taille  int64 // taille réelle (fin de fichier)
 	Disque  int64 // place occupée sur le disque (clusters alloués)
 	Lien    bool  // lien symbolique ou jonction : on ne le suit pas
+	Modif   int64 // dernière modification, en secondes Unix (0 : inconnue)
 }
 
 // listerDossier appelle fn pour chaque élément du dossier, sans « . » ni « .. ».

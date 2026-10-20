@@ -3,7 +3,7 @@
   // enfants sont demandés au moteur Go, déjà triés selon la colonne choisie.
   import Icon from './Icon.svelte'
   import { call, message, montrer } from './state.svelte.js'
-  import { octets, nombre, pourcent, pourcentTexte } from './format.js'
+  import { octets, nombre, pourcent, pourcentTexte, dateCourte, dateLongue } from './format.js'
 
   let { gen, mode, tri = $bindable({ colonne: '', inverse: false }) } = $props()
 
@@ -84,7 +84,7 @@
 
   // La colonne réellement utilisée : « % du parent » trie sur la taille du mode.
   const effective = $derived(tri.colonne || (mode === 'disque' ? 'disque' : 'taille'))
-  const decroissant = $derived((effective !== 'nom') !== tri.inverse)
+  const decroissant = $derived((effective !== 'nom') !== tri.inverse) // la date : la plus récente d'abord
 
   // Premier clic : la colonne, dans son sens naturel ; clic suivant : on inverse.
   function trierPar(colonne) {
@@ -149,6 +149,7 @@
       {@render entete('', '% du parent', 'c-pct')}
       {@render entete('fichiers', 'Fichiers', 'num c-fichiers')}
       {@render entete('dossiers', 'Dossiers', 'num c-dossiers')}
+      {@render entete('modif', 'Modifié', 'num c-modif')}
       <span role="columnheader" class="c-act"><span class="sr">Actions</span></span>
     </div>
 
@@ -181,6 +182,7 @@
           </span>
           <span class="num c-fichiers" role="gridcell">{e.type === 'fichier' ? '' : nombre(e.fichiers)}</span>
           <span class="num c-dossiers" role="gridcell">{e.type === 'dossier' || e.type === 'reste' ? nombre(e.dossiers) : ''}</span>
+          <span class="num c-modif" role="gridcell" title={e.type === 'fichier' ? `Modifié le ${dateLongue(e.modif)}` : e.modif ? `Fichier le plus récent : ${dateLongue(e.modif)}` : 'Aucun fichier'}>{dateCourte(e.modif)}</span>
           <span class="c-act" role="gridcell">
             {#if e.type !== 'reste'}
               <button class="ouvrir" title="Montrer dans l'Explorateur" aria-label="Montrer dans l'Explorateur" onclick={() => ouvrirExplorateur(n)}>
@@ -206,7 +208,7 @@
   }
   .ligne {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 96px 96px 168px 88px 80px 40px;
+    grid-template-columns: minmax(0, 1fr) 96px 96px 168px 88px 80px 100px 40px;
     align-items: center;
     min-height: 34px;
     padding-right: 6px;
@@ -425,6 +427,7 @@
     }
     .c-fichiers,
     .c-dossiers,
+    .c-modif,
     .c-taille:not(.actif),
     .c-disque:not(.actif) {
       display: none;

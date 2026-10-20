@@ -14,6 +14,7 @@ const (
 	TriDisque   = "disque"   // taille sur disque
 	TriFichiers = "fichiers" // nombre de fichiers
 	TriDossiers = "dossiers" // nombre de sous-dossiers
+	TriModif    = "modif"    // date de dernière modification, la plus récente d'abord
 )
 
 // Tri décrit l'ordre demandé par l'interface. Par défaut, les tailles et les
@@ -49,6 +50,8 @@ func (t Tri) trier(lignes []Entree, mode string) {
 		principal = func(a, b Entree) int { return cmp.Compare(b.Disque, a.Disque) }
 	case TriFichiers:
 		principal = func(a, b Entree) int { return cmp.Compare(b.Fichiers, a.Fichiers) }
+	case TriModif:
+		principal = func(a, b Entree) int { return cmp.Compare(b.Modif, a.Modif) }
 	case TriDossiers:
 		principal = func(a, b Entree) int { return cmp.Compare(b.Dossiers, a.Dossiers) }
 	default:

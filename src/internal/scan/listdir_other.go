@@ -29,6 +29,7 @@ func lister(chemin string, fn func(e entree)) error {
 		e.Dossier = info.IsDir()
 		if !e.Dossier {
 			e.Taille = info.Size()
+			e.Modif = info.ModTime().Unix()
 			e.Disque = info.Size()
 			if st, ok := info.Sys().(*syscall.Stat_t); ok {
 				e.Disque = int64(st.Blocks) * 512

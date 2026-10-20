@@ -78,6 +78,7 @@ func lister(chemin string, fn func(e entree)) error {
 					Dossier: attr&windows.FILE_ATTRIBUTE_DIRECTORY != 0,
 					Taille:  info.EndOfFile,
 					Disque:  info.AllocationSize,
+					Modif:   filetimeUnix(info.LastWriteTime),
 				}
 				// Jonctions et liens symboliques : ne pas les suivre, sinon on
 				// compte deux fois (ou on tourne en rond). Les autres points de
@@ -96,6 +97,16 @@ func lister(chemin string, fn func(e entree)) error {
 			off += uintptr(info.NextEntryOffset)
 		}
 	}
+}
+
+// filetimeUnix convertit un FILETIME (centaines de nanosecondes depuis 1601)
+// en secondes Unix.
+func filetimeUnix(ft int64) int64 {
+	const ecart1601a1970 = 116444736000000000
+	if ft <= ecart1601a1970 {
+		return 0
+	}
+	return (ft - ecart1601a1970) / 10000000
 }
 
 func estPointOuPointPoint(n []uint16) bool {

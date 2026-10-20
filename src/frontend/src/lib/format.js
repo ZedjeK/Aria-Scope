@@ -42,3 +42,15 @@ export function parSeconde(n, ms) {
   if (!ms || ms < 500) return ''
   return `${Math.round((n * 1000) / ms).toLocaleString('fr-FR')}/s`
 }
+
+// Date de modification (secondes Unix) : courte dans la colonne, complète au survol.
+export function dateCourte(sec) {
+  if (!sec) return '—'
+  return new Date(sec * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+export function dateLongue(sec) {
+  if (!sec) return 'Aucun fichier'
+  const d = new Date(sec * 1000)
+  return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+}

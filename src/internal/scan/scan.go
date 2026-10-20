@@ -41,11 +41,13 @@ type Dossier struct {
 	nFichiers int64
 	fTaille   int64
 	fDisque   int64
-	illisible bool // ce dossier n'a pas pu être lu (accès refusé…)
+	fModif    int64 // fichier le plus récemment modifié de ce dossier
+	illisible bool  // ce dossier n'a pas pu être lu (accès refusé…)
 	nLiens    int64
 
 	// Totaux du sous-arbre, calculés par finaliser
 	taille, disque     int64
+	modif              int64
 	fichiers, dossiers int64
 	erreurs, liens     int64
 }
@@ -170,6 +172,7 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 			d.nFichiers++
 			d.fTaille += e.Taille
 			d.fDisque += e.Disque
+			d.fModif = max(d.fModif, e.Modif)
 			s.fichiers.Add(1)
 			s.taille.Add(e.Taille)
 			s.disque.Add(e.Disque)
@@ -214,6 +217,7 @@ func (s *Scan) finaliser() {
 		d := noeuds[i]
 		d.taille += d.fTaille
 		d.disque += d.fDisque
+		d.modif = max(d.modif, d.fModif)
 		d.fichiers += d.nFichiers
 		d.liens += d.nLiens
 		if d.illisible {
@@ -222,6 +226,7 @@ func (s *Scan) finaliser() {
 		if p := d.parent; p != nil {
 			p.taille += d.taille
 			p.disque += d.disque
+			p.modif = max(p.modif, d.modif)
 			p.fichiers += d.fichiers
 			p.dossiers += d.dossiers + 1
 			p.erreurs += d.erreurs
@@ -271,6 +276,7 @@ type Entree struct {
 	Dossiers int64  `json:"dossiers"`
 	Erreurs  int64  `json:"erreurs"`
 	Liens    int64  `json:"liens"`
+	Modif    int64  `json:"modif"`    // fichier le plus récemment modifié, secondes Unix (0 : aucun)
 	Ouvrable bool   `json:"ouvrable"` // a un contenu à déplier
 	Nombre   int    `json:"nombre"`   // « reste » : nombre d'éléments regroupés
 }
@@ -290,7 +296,7 @@ func (s *Scan) noeud(id int32) (*Dossier, error) {
 func entreeDossier(d *Dossier) Entree {
 	return Entree{
 		ID: d.id, Type: "dossier", Nom: d.nom,
-		Taille: d.taille, Disque: d.disque,
+		Taille: d.taille, Disque: d.disque, Modif: d.modif,
 		Fichiers: d.fichiers, Dossiers: d.dossiers,
 		Erreurs: d.erreurs, Liens: d.liens,
 		Ouvrable: len(d.enfants) > 0 || d.nFichiers > 0,
@@ -316,6 +322,7 @@ func limiter(lignes []Entree, limite int, parent int32) []Entree {
 	for _, l := range lignes[limite:] {
 		reste.Taille += l.Taille
 		reste.Disque += l.Disque
+		reste.Modif = max(reste.Modif, l.Modif)
 		reste.Fichiers += l.Fichiers
 		reste.Dossiers += l.Dossiers
 	}
@@ -336,7 +343,7 @@ func (s *Scan) Enfants(id int32, mode string, t Tri, limite int) ([]Entree, erro
 	if d.nFichiers > 0 {
 		lignes = append(lignes, Entree{
 			ID: d.id, Type: "fichiers",
-			Taille: d.fTaille, Disque: d.fDisque,
+			Taille: d.fTaille, Disque: d.fDisque, Modif: d.fModif,
 			Fichiers: d.nFichiers, Ouvrable: true,
 		})
 	}
@@ -359,7 +366,7 @@ func (s *Scan) Fichiers(id int32, mode string, t Tri, limite int) ([]Entree, err
 		if e.Dossier || e.Lien {
 			return
 		}
-		lignes = append(lignes, Entree{ID: id, Type: "fichier", Nom: e.Nom, Taille: e.Taille, Disque: e.Disque, Fichiers: 1})
+		lignes = append(lignes, Entree{ID: id, Type: "fichier", Nom: e.Nom, Taille: e.Taille, Disque: e.Disque, Modif: e.Modif, Fichiers: 1})
 	})
 	if err != nil {
 		return nil, err
