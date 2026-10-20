@@ -131,6 +131,15 @@ func (s *ScopeService) Fichiers(gen int, id int32, mode string, tri scan.Tri) ([
 	return sc.Fichiers(id, mode, tri, limiteLignes)
 }
 
+// GrosFichiers renvoie les 1 000 plus gros fichiers de l'analyse, triés selon tri.
+func (s *ScopeService) GrosFichiers(gen int, mode string, tri scan.Tri) ([]scan.GrosFichier, error) {
+	sc, err := s.courant(gen)
+	if err != nil {
+		return nil, err
+	}
+	return sc.GrosFichiers(mode, tri)
+}
+
 // Carte renvoie les blocs de la treemap du dossier id, mesurés selon mode.
 func (s *ScopeService) Carte(gen int, id int32, mode string) (scan.Bloc, error) {
 	sc, err := s.courant(gen)

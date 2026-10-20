@@ -3,6 +3,7 @@
   import Arbre from '../lib/Arbre.svelte'
   import Carte from '../lib/Carte.svelte'
   import Anneau from '../lib/Anneau.svelte'
+  import GrosFichiers from '../lib/GrosFichiers.svelte'
   import { app, lancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
 
@@ -88,7 +89,17 @@
 
       {#key gen}
         <div class="vue" class:avec-carte={app.carte}>
-          <div class="col-arbre"><Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} /></div>
+          <div class="col-arbre">
+            <div class="onglets" role="tablist" aria-label="Vue">
+              <button role="tab" aria-selected={app.vue === 'arbre'} class:on={app.vue === 'arbre'} onclick={() => (app.vue = 'arbre')}>arbre</button>
+              <button role="tab" aria-selected={app.vue === 'gros'} class:on={app.vue === 'gros'} onclick={() => (app.vue = 'gros')}>gros fichiers</button>
+            </div>
+            {#if app.vue === 'arbre'}
+              <Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} />
+            {:else}
+              <GrosFichiers {gen} mode={app.mode} bind:selection={app.selection} />
+            {/if}
+          </div>
           {#if app.carte}
             <div class="col-carte">
               <div class="onglets" role="tablist" aria-label="Visuel">
@@ -137,6 +148,12 @@
   .visuel {
     flex: 1;
     min-height: 0;
+  }
+  .col-arbre {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
   }
   .onglets {
     flex: none;

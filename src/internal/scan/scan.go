@@ -77,6 +77,7 @@ type Scan struct {
 
 	fichiers, dossiers, taille, disque, erreurs, liens atomic.Int64
 	courant                                            atomic.Pointer[string]
+	gros                                               palmares
 
 	mu      sync.RWMutex
 	etat    string
@@ -176,6 +177,7 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 			s.fichiers.Add(1)
 			s.taille.Add(e.Taille)
 			s.disque.Add(e.Disque)
+			s.gros.proposer(d, e)
 		}
 	})
 	if err != nil {
