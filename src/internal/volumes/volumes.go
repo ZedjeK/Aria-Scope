@@ -30,9 +30,10 @@ func Utilise(racine string) int64 {
 }
 
 func normaliser(p string) string {
-	p = filepath.Clean(p)
-	if len(p) == 2 && p[1] == ':' { // « C: » désigne le dossier courant, pas la racine
+	// « C: » seul désigne le dossier courant du lecteur (Clean le transforme
+	// en « C:. ») : on le complète en racine avant de nettoyer.
+	if len(p) == 2 && p[1] == ':' {
 		p += string(filepath.Separator)
 	}
-	return strings.ToUpper(p)
+	return strings.ToUpper(filepath.Clean(p))
 }
