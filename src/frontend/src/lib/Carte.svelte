@@ -45,13 +45,13 @@
   const tuiles = $derived(donnees && largeur > 0 && hauteur > 0 ? disposer(donnees, largeur, hauteur) : [])
   const tuileChoisie = $derived(selection ? (tuiles.find((t) => estBlocChoisi(selection, t.bloc)) ?? null) : null)
 
-  // Choisi dans l'arbre mais absent de la carte : on recadre sur son dossier
+  // Choisi ailleurs (arbre, anneau) mais absent de la carte : on recadre sur son dossier
   // parent (ou, pour des fichiers, sur le dossier qui les contient).
   let dejaRecadre = ''
   $effect(() => {
     const sel = selection
     const ts = tuiles
-    if (!sel || sel.origine !== 'arbre' || !donnees || chargement) return
+    if (!sel || sel.origine === 'carte' || !donnees || chargement) return
     if (ts.some((t) => estBlocChoisi(sel, t.bloc))) return
     if (sel.type === 'dossier' && sel.id === racineId) return // c'est le dossier affiché
     const cle = `${sel.type}:${sel.id}`
@@ -203,8 +203,11 @@
       <span class="sel-nom">{nomBloc(b)}</span>
       <span class="sel-taille">{octets(b.valeur)} · {pourcentTexte(pourcent(b.valeur, donnees.valeur))}</span>
       <button class="ouvrir" onclick={() => montrer(gen, b.id)} title="Montrer dans l'Explorateur" aria-label="Montrer dans l'Explorateur"><Icon name="external" size={15} /></button>
+    {:else if selection?.type === 'dossier' && selection.id === racineId}
+      <span class="sel-nom">{fil.at(-1)?.nom ?? ''}</span>
+      <span class="hint sel-taille">dossier affiché par la carte</span>
     {:else if selection}
-      <span class="sel-nom">{selection.type === 'dossier' && selection.id === racineId ? `${fil.at(-1)?.nom ?? ''} (dossier affiché)` : selection.nom || 'Sélection'}</span>
+      <span class="sel-nom">{selection.nom || 'Sélection'}</span>
       <span class="hint sel-taille">trop petit pour la carte</span>
     {:else}
       <span class="hint">Clic : sélection · double-clic : plonger · ⌫ : remonter</span>

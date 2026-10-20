@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.1 · Windows 10/11 x64 · licence MIT
+  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.2 · Windows 10/11 x64 · licence MIT
 </p>
 
 ## Ce qu'il fait
@@ -20,7 +20,10 @@
 | --- | --- |
 | **Disques** | Tous tes lecteurs avec leur remplissage, et une analyse en un clic. Ou un dossier précis, si tu sais déjà où chercher |
 | **Scan parallèle** | Jusqu'à 32 dossiers lus en même temps, une seule requête par dossier pour obtenir toutes les tailles. Progression en direct, et un bouton pour arrêter quand tu veux |
-| **Arborescence triée** | Chaque dossier, du plus lourd au plus léger : taille, part de son parent, nombre de fichiers et de sous-dossiers |
+| **Arborescence triée** | Chaque dossier, du plus lourd au plus léger : taille, part de son parent, nombre de fichiers et de sous-dossiers, date du fichier le plus récent. Un clic sur un en-tête trie par n'importe quelle colonne |
+| **Treemap néon** | Chaque rectangle a la surface de ce qu'il pèse, une couleur par grande branche. Survol pour le détail, double-clic pour plonger dans un dossier, fil d'Ariane pour remonter |
+| **Anneau** | La répartition du dossier sélectionné entre ses 8 plus gros éléments ; un clic sur une part plonge dedans |
+| **Tout est relié** | Ce que tu sélectionnes dans l'arbre s'allume sur la carte et l'anneau, et l'inverse : l'arbre se déplie tout seul jusqu'à la bonne ligne |
 | **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
 | **Fichiers à la demande** | Les fichiers d'un dossier sont relus au moment où tu les déplies : la liste reflète le disque, et la mémoire reste légère même sur un disque entier |
 | **Explorateur** | Un clic sur ↗ ouvre le dossier, ou sélectionne le fichier, dans l'Explorateur Windows |
@@ -48,10 +51,11 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 ## Feuille de route
 
-- **v0.2** : treemap cliquable, tri sur toutes les colonnes
-- **v0.3** : les plus gros fichiers, la répartition par extension, des filtres
-- **v0.4** : envoi à la corbeille, export CSV ou HTML
-- **Plus tard** : doublons, historique des analyses, scan éclair via la MFT, version Linux
+- **Enquête** : les plus gros fichiers, la répartition par type, par âge et par propriétaire, des filtres
+- **Ménage** : corbeille, déplacer, copier, archiver, renommage en masse, menu contextuel, annulation
+- **Recherche** : recherche multicritère, chemins trop longs, doublons vérifiés par SHA-256
+- **Export et historique** : CSV, HTML, Excel, PDF, SQLite ; analyses sauvegardées et comparées
+- **Plus tard** : détails NTFS, ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
 
 ## Licence
 

@@ -2,6 +2,7 @@
   import Icon from '../lib/Icon.svelte'
   import Arbre from '../lib/Arbre.svelte'
   import Carte from '../lib/Carte.svelte'
+  import Anneau from '../lib/Anneau.svelte'
   import { app, lancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
 
@@ -35,7 +36,7 @@
         {#if enCours}
           <button class="btn-primary" onclick={arreter}><Icon name="stop" size={16} /> Arrêter</button>
         {:else}
-          <button class="btn-ghost" class:on={app.carte} aria-pressed={app.carte} onclick={() => (app.carte = !app.carte)} title={app.carte ? 'Masquer la carte' : 'Afficher la carte'}><Icon name="map" size={16} /> Carte</button>
+          <button class="btn-ghost" class:on={app.carte} aria-pressed={app.carte} onclick={() => (app.carte = !app.carte)} title={app.carte ? 'Masquer les visuels' : 'Afficher les visuels'}><Icon name="map" size={16} /> Visuels</button>
           <button class="btn-ghost" onclick={() => lancer(scan.racine)}><Icon name="refresh" size={16} /> Relancer</button>
           <button class="btn-ghost" onclick={() => (app.page = 'accueil')}><Icon name="scope" size={16} /> Nouvelle analyse</button>
         {/if}
@@ -89,7 +90,19 @@
         <div class="vue" class:avec-carte={app.carte}>
           <div class="col-arbre"><Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} /></div>
           {#if app.carte}
-            <div class="col-carte"><Carte {gen} mode={app.mode} bind:selection={app.selection} /></div>
+            <div class="col-carte">
+              <div class="onglets" role="tablist" aria-label="Visuel">
+                <button role="tab" aria-selected={app.visuel === 'carte'} class:on={app.visuel === 'carte'} onclick={() => (app.visuel = 'carte')}>carte</button>
+                <button role="tab" aria-selected={app.visuel === 'anneau'} class:on={app.visuel === 'anneau'} onclick={() => (app.visuel = 'anneau')}>anneau</button>
+              </div>
+              <div class="visuel">
+                {#if app.visuel === 'carte'}
+                  <Carte {gen} mode={app.mode} bind:selection={app.selection} />
+                {:else}
+                  <Anneau {gen} mode={app.mode} bind:selection={app.selection} />
+                {/if}
+              </div>
+            </div>
           {/if}
         </div>
       {/key}
@@ -116,7 +129,39 @@
   }
   .col-carte {
     order: -1;
-    height: 380px;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .visuel {
+    flex: 1;
+    min-height: 0;
+  }
+  .onglets {
+    flex: none;
+    align-self: flex-start;
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    background: var(--surface-sunken);
+  }
+  .onglets button {
+    min-height: 30px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px 0;
+    corner-shape: bevel;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .onglets button.on {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
   }
   @container (min-width: 900px) {
     .vue.avec-carte {

@@ -78,9 +78,9 @@ export function squarifier(valeurs, x, y, w, h) {
 
 // Teintes néon des grandes branches : chaque dossier du premier niveau garde
 // sa couleur dans toute sa descendance, pour qu'on s'y retrouve d'un coup d'œil.
-const TEINTES = ['#7df9ff', '#5c8bff', '#b18cff', '#3fe0c5', '#ff6fae', '#59c3ff', '#b8f35a', '#a9b8ff']
-const GRIS_FICHIERS = '#93a8c8'
-const GRIS_RESTE = '#3b5378'
+export const TEINTES = ['#7df9ff', '#5c8bff', '#b18cff', '#3fe0c5', '#ff6fae', '#59c3ff', '#b8f35a', '#a9b8ff']
+export const GRIS_FICHIERS = '#93a8c8'
+export const GRIS_RESTE = '#3b5378'
 
 const ENTETE = 15 // bandeau du nom d'un dossier dont on dessine l'intérieur
 const MARGE = 2

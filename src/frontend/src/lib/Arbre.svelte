@@ -44,7 +44,7 @@
 
   const choisir = (n) => (selection = selectionDe(n.e, 'arbre'))
 
-  // Choisi sur la carte : on déplie le chemin jusqu'à la ligne et on la montre.
+  // Choisi ailleurs (carte, anneau) : on déplie le chemin jusqu'à la ligne et on la montre.
   async function reveler(sel) {
     let fil
     try {
@@ -73,7 +73,7 @@
   $effect(() => {
     const sel = selection
     const r = racine
-    if (sel?.origine === 'carte' && r) untrack(() => reveler(sel))
+    if (sel && sel.origine !== 'arbre' && r) untrack(() => reveler(sel))
   })
 
   function basculer(n) {
