@@ -1,0 +1,117 @@
+# Compile Aria-Scope.exe sur un runner Windows de GitHub : rien à installer
+# sur ta machine.
+#
+# Actions → Compiler Aria Scope → Run workflow.
+#   - « Publier la release » coché : crée la release v<version> (version lue dans
+#     build.ps1) avec le zip, les empreintes SHA-256 et l'attestation de provenance.
+
+name: Compiler Aria Scope
+
+on:
+  workflow_dispatch:
+    inputs:
+      publier:
+        description: "Publier la release v<version> (version lue dans build.ps1)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # création de la release
+  id-token: write # attestation Sigstore
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lire la version d'Aria
+        id: aria
+        run: |
+          $m = Select-String -Path build.ps1 -Pattern "\`$Version = '([^']+)'"
+          $v = $m.Matches[0].Groups[1].Value
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version invalide dans build.ps1 : '$v'" }
+          Write-Host "Aria Scope $v"
+          "version=$v" | Out-File $env:GITHUB_OUTPUT -Append
+
+      - name: Vérifier que la release n'existe pas déjà
+        if: inputs.publier
+        run: |
+          gh release view "v${{ steps.aria.outputs.version }}" 2>$null
+          if ($LASTEXITCODE -eq 0) { throw "La release v${{ steps.aria.outputs.version }} existe déjà : augmente la version dans build.ps1." }
+          $global:LASTEXITCODE = 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Tests (sur un vrai NTFS Windows)
+        working-directory: src
+        run: go test ./internal/...
+
+      - name: Compiler Aria-Scope.exe
+        run: ./build.ps1 -Version ${{ steps.aria.outputs.version }}
+
+      - name: Assembler
+        id: dist
+        run: |
+          $v = "${{ steps.aria.outputs.version }}"
+          New-Item -ItemType Directory -Force dist, release | Out-Null
+          Copy-Item Aria-Scope.exe, LICENSE, LICENCES-TIERS.txt dist/
+
+          $sha = (Get-FileHash dist/Aria-Scope.exe -Algorithm SHA256).Hash.ToLower()
+          @"
+          Aria Scope $v
+          Commit Aria      : $env:GITHUB_SHA
+          Toolchains       : $(go version) / node $(node --version)
+          SHA256 Aria-Scope.exe :
+          $sha
+          "@ | Out-File dist/BUILDINFO.txt -Encoding utf8
+          Get-Content dist/BUILDINFO.txt
+
+          $zip = "release/Aria-Scope-$v.zip"
+          Compress-Archive -Path dist/* -DestinationPath $zip
+          $zsha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "exe=$sha" | Out-File $env:GITHUB_OUTPUT -Append
+          "zip=$zsha" | Out-File $env:GITHUB_OUTPUT -Append
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/Aria-Scope.exe
+            release/*.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aria-Scope-${{ steps.aria.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+      - name: Publier la release
+        if: inputs.publier
+        run: |
+          $v = "${{ steps.aria.outputs.version }}"
+          $notes = Get-Content .github/release-notes.md -Raw -Encoding utf8
+          $notes = $notes.Replace('{VERSION}', $v)
+          $notes = $notes.Replace('{REPO_URL}', "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY").Replace('{OWNER}', "$env:GITHUB_REPOSITORY_OWNER")
+          $notes += "`n## Empreintes SHA-256`n`n" + '```' + "`n" +
+            "${{ steps.dist.outputs.zip }}  Aria-Scope-$v.zip`n" +
+            "${{ steps.dist.outputs.exe }}  Aria-Scope.exe (dans le zip)`n" + '```' + "`n"
+          Set-Content notes.md $notes -Encoding utf8NoBOM -NoNewline
+          Get-Content notes.md
+          gh release create "v$v" (Get-ChildItem release/*.zip).FullName --title "Aria Scope $v" --notes-file notes.md --target $env:GITHUB_SHA

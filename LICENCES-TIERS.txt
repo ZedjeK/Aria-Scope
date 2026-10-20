@@ -1,0 +1,20 @@
+Aria Scope s'appuie sur les logiciels suivants. Le code propre à Aria Scope
+est publié sous licence MIT (fichier LICENSE).
+
+
+== Bibliothèques compilées dans Aria-Scope.exe ==
+
+Wails v3                 MIT           https://github.com/wailsapp/wails
+go-ole                   MIT           https://github.com/go-ole/go-ole
+go-colorable, go-isatty  MIT           https://github.com/mattn
+xdg                      MIT           https://github.com/adrg/xdg
+golang.org/x/sys         BSD-3-Clause  https://cs.opensource.google/go/x
+
+
+== Interface ==
+
+Svelte                   MIT           https://github.com/sveltejs/svelte
+@wailsio/runtime         MIT           https://github.com/wailsapp/wails
+Space Grotesk            SIL Open Font License 1.1   https://github.com/floriankarsten/space-grotesk
+IBM Plex Mono            SIL Open Font License 1.1   https://github.com/IBM/plex
+  (polices embarquées via Fontsource : https://fontsource.org)

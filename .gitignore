@@ -1,0 +1,9 @@
+# Binaires produits
+*.exe
+/dist/
+/release/
+
+# Interface et ressources générées
+src/frontend/node_modules/
+src/frontend/dist/
+src/*.syso
