@@ -7,6 +7,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"aria-scope/internal/reglages"
 	"aria-scope/internal/scan"
 	"aria-scope/internal/volumes"
 )
@@ -18,7 +19,8 @@ const limiteLignes = 300
 
 // ScopeService expose au frontend les actions d'Aria Scope.
 type ScopeService struct {
-	app *application.App // renseigné après application.New
+	app      *application.App  // renseigné après application.New
+	reglages *reglages.Magasin // nil si le dossier de configuration est introuvable
 
 	mu      sync.Mutex
 	scan    *scan.Scan
@@ -77,6 +79,22 @@ func (s *ScopeService) Lancer(chemin string, filtres scan.Filtres) error {
 	}
 	s.remplacer(nouveau, volumes.Utilise(nouveau.Racine()))
 	return nil
+}
+
+// Reglages renvoie les préférences enregistrées.
+func (s *ScopeService) Reglages() reglages.Reglages {
+	if s.reglages == nil {
+		return reglages.Defaut()
+	}
+	return s.reglages.Lire()
+}
+
+// SetAnalyseAuto active ou non l'analyse de tout le PC à l'ouverture.
+func (s *ScopeService) SetAnalyseAuto(actif bool) (reglages.Reglages, error) {
+	if s.reglages == nil {
+		return reglages.Defaut(), errors.New("dossier de configuration introuvable : réglage non enregistré")
+	}
+	return s.reglages.Modifier(func(r *reglages.Reglages) { r.AnalyseAuto = actif })
 }
 
 // NomPC est le nom de la racine virtuelle qui réunit tous les disques.

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import Icon from './lib/Icon.svelte'
   import Logo from './lib/Logo.svelte'
-  import { app, refresh, chargerVolumes, suivre, scanEnCours } from './lib/state.svelte.js'
+  import { app, demarrer, chargerVolumes, suivre, scanEnCours } from './lib/state.svelte.js'
   import { octets, pourcent, pourcentTexte } from './lib/format.js'
   import Accueil from './pages/Accueil.svelte'
   import Analyse from './pages/Analyse.svelte'
@@ -18,7 +18,7 @@
   const avance = $derived(enCours && app.etat?.attendu > 0 ? pourcent(scan.disque, app.etat.attendu) : null)
 
   onMount(() => {
-    refresh()
+    demarrer()
     chargerVolumes()
     suivre()
   })

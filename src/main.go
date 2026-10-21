@@ -9,6 +9,10 @@ import (
 	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
+
+	"aria-scope/internal/reglages"
+	"aria-scope/internal/scan"
 )
 
 //go:embed all:frontend/dist
@@ -22,6 +26,9 @@ var version = "dev"
 
 func main() {
 	svc := &ScopeService{}
+	if m, err := reglages.Ouvrir(); err == nil {
+		svc.reglages = m
+	}
 	var window *application.WebviewWindow
 
 	app := application.New(application.Options{
@@ -55,6 +62,16 @@ func main() {
 		BackgroundColour: application.NewRGB(3, 8, 18),
 		URL:              "/",
 		Windows:          application.WindowsWindow{Theme: application.Dark},
+	})
+
+	// Analyse de tout le PC dès l'ouverture. On attend que l'appli soit
+	// démarrée : une seconde instance, aussitôt refermée, ne lance rien.
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		if svc.Reglages().AnalyseAuto {
+			if err := svc.LancerPC(scan.Filtres{}); err != nil {
+				log.Printf("analyse automatique : %v", err)
+			}
+		}
 	})
 
 	if err := app.Run(); err != nil {

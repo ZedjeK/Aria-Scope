@@ -17,6 +17,8 @@ export const app = $state({
   portee: 'tout', // statistiques : "tout" (l'analyse) ou "selection" (le dossier choisi)
   filtres: filtresVides(), // appliqués aux prochaines analyses (voir filtres.js)
   panneauFiltres: false,
+  reglages: { analyseAuto: true },
+  demarrageAuto: false, // l'analyse de tout le PC va démarrer d'elle-même
   selection: null, // partagée entre l'arbre et la carte (voir selection.js)
   erreur: '',
   loadError: '',
@@ -27,6 +29,7 @@ export const scanEnCours = () => app.etat?.scan?.etat === 'scan'
 export async function refresh() {
   try {
     app.etat = await call('Etat')
+    if (app.etat?.scan) app.demarrageAuto = false
     app.loadError = ''
   } catch (err) {
     app.loadError = message(err)
@@ -91,6 +94,28 @@ export async function lancerPC() {
   }
   await refresh()
   return ok
+}
+
+// Au démarrage : avec l'analyse automatique, on va droit à la page d'analyse,
+// le moteur lance « Ce PC » de son côté.
+export async function demarrer() {
+  try {
+    app.reglages = await call('Reglages')
+  } catch {}
+  await refresh()
+  if (app.etat?.scan || app.reglages.analyseAuto) app.page = 'analyse'
+  if (!app.etat?.scan && app.reglages.analyseAuto) {
+    app.demarrageAuto = true
+    setTimeout(() => (app.demarrageAuto = false), 6000) // au cas où aucun disque ne serait lisible
+  }
+}
+
+export async function setAnalyseAuto(actif) {
+  try {
+    app.reglages = await call('SetAnalyseAuto', actif)
+  } catch (err) {
+    app.erreur = message(err)
+  }
 }
 
 // Relance l'analyse affichée, qu'il s'agisse d'un dossier ou de tout le PC.

@@ -11,14 +11,15 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.3 · Windows 10/11 x64 · licence MIT
+  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.4 · Windows 10/11 x64 · licence MIT
 </p>
 
 ## Ce qu'il fait
 
 | Fonction | Ce que ça fait |
 | --- | --- |
-| **Disques** | Tous tes lecteurs avec leur remplissage, et une analyse en un clic. Ou un dossier précis, si tu sais déjà où chercher |
+| **Tout le PC, dès l'ouverture** | À son lancement, Aria Scope analyse tous tes disques internes et externes en même temps (pas les lecteurs réseau ni optiques) et les réunit sous « Ce PC ». Désactivable d'un clic sur la page des disques |
+| **Disques** | Tous tes lecteurs avec leur remplissage, pour analyser un seul disque. Ou un dossier précis, si tu sais déjà où chercher |
 | **Scan parallèle** | Jusqu'à 32 dossiers lus en même temps, une seule requête par dossier pour obtenir toutes les tailles. Progression en direct, et un bouton pour arrêter quand tu veux |
 | **Arborescence triée** | Chaque dossier, du plus lourd au plus léger : taille, part de son parent, nombre de fichiers et de sous-dossiers, date du fichier le plus récent. Un clic sur un en-tête trie par n'importe quelle colonne |
 | **Treemap néon** | Chaque rectangle a la surface de ce qu'il pèse, une couleur par grande branche. Survol pour le détail, double-clic pour plonger dans un dossier, fil d'Ariane pour remonter |
@@ -40,6 +41,7 @@
 
 - **Dossiers illisibles** : sans droits administrateur, certains dossiers système sont refusés. Aria les compte et les signale d'un ⚠ dans l'arborescence. Lancé en administrateur (clic droit → « Exécuter en tant qu'administrateur »), il en lira la plupart.
 - **Liens et jonctions** : ils ne sont pas suivis, pour ne rien compter deux fois. Windows en sème un peu partout (« Application Data », « Mes documents »…), ils apparaissent dans le compteur « liens ignorés ».
+- **Réglages** : ils sont gardés dans `%APPDATA%\AriaScope\reglages.json`. L'exe, lui, reste portable.
 - **Gros dossiers** : au-delà de 300 éléments, les plus légers sont regroupés sur une ligne « N autres éléments », pour que l'interface reste fluide même dans `WinSxS`.
 
 ## Compiler soi-même

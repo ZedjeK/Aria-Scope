@@ -1,8 +1,9 @@
 <script>
   import Icon from '../lib/Icon.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
+  import Switch from '../lib/Switch.svelte'
   import { resume, actifs, filtresVides } from '../lib/filtres.js'
-  import { app, lancer, lancerPC, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
+  import { app, lancer, lancerPC, choisirEtLancer, scanEnCours, setAnalyseAuto } from '../lib/state.svelte.js'
   import { octets, pourcent, pourcentTexte } from '../lib/format.js'
 
   const icones = { fixe: 'disk', amovible: 'usb', reseau: 'network', optique: 'disc', ram: 'disk' }
@@ -62,6 +63,10 @@
           <span><strong>{octets(pcUtilise)}</strong> utilisés · {pourcentTexte(p)}</span>
           <span>sur {octets(pcTotal)}</span>
         </div>
+        <label class="auto">
+          <Switch checked={app.reglages.analyseAuto} label="Analyser tout le PC à l'ouverture" onchange={setAnalyseAuto} />
+          <span>Analyser tout le PC à l'ouverture d'Aria Scope</span>
+        </label>
         <button class="btn-primary" onclick={lancerPC}>
           <Icon name="scope" size={16} /> Analyser tout le PC
         </button>
@@ -242,6 +247,14 @@
   .pc {
     border-color: color-mix(in srgb, var(--action) 45%, transparent);
     box-shadow: 0 0 18px color-mix(in srgb, var(--action) 10%, transparent);
+  }
+  .auto {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
   }
   .pc .vol-icon {
     background: color-mix(in srgb, var(--action) 14%, transparent);

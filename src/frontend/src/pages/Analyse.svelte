@@ -20,7 +20,12 @@
 </script>
 
 <section class="page">
-  {#if !scan}
+  {#if !scan && app.demarrageAuto}
+    <div class="page-head">
+      <h1>analyse</h1>
+    </div>
+    <p class="hint">Démarrage de l'analyse de tout le PC…</p>
+  {:else if !scan}
     <div class="page-head">
       <h1>analyse</h1>
     </div>
