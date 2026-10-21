@@ -16,6 +16,18 @@ type Volume struct {
 	Libre   int64  `json:"libre"`
 }
 
+// Locaux renvoie les disques analysés par « Tout le PC » : internes et
+// externes (clés USB, disques USB), sans les lecteurs réseau ni optiques.
+func Locaux() []Volume {
+	var out []Volume
+	for _, v := range Lister() {
+		if v.Type == "fixe" || v.Type == "amovible" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 // Utilise renvoie l'espace occupé du volume dont racine est la racine, ou 0
 // si racine n'est pas une racine de volume. Sert à estimer l'avancement d'un
 // scan de disque entier.

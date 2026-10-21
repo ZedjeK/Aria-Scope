@@ -2,13 +2,18 @@
   import Icon from '../lib/Icon.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
   import { resume, actifs, filtresVides } from '../lib/filtres.js'
-  import { app, lancer, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
+  import { app, lancer, lancerPC, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, pourcent, pourcentTexte } from '../lib/format.js'
 
   const icones = { fixe: 'disk', amovible: 'usb', reseau: 'network', optique: 'disc', ram: 'disk' }
   const types = { fixe: 'disque interne', amovible: 'amovible', reseau: 'réseau', optique: 'optique', ram: 'RAM disque' }
 
   const enCours = $derived(scanEnCours())
+
+  // Ce que « Tout le PC » analyse : disques internes et externes.
+  const locaux = $derived(app.volumes.filter((v) => v.type === 'fixe' || v.type === 'amovible'))
+  const pcUtilise = $derived(locaux.reduce((s, v) => s + v.total - v.libre, 0))
+  const pcTotal = $derived(locaux.reduce((s, v) => s + v.total, 0))
 </script>
 
 <section class="page">
@@ -39,6 +44,30 @@
   {/if}
 
   <div class="volumes">
+    {#if locaux.length > 0}
+      {@const p = pourcent(pcUtilise, pcTotal)}
+      <article class="card volume pc">
+        <div class="vol-head">
+          <span class="vol-icon"><Icon name="scope" size={22} /></span>
+          <div class="vol-titre">
+            <span class="vol-lettre">Tout le PC</span>
+            <span class="vol-nom">{locaux.map((v) => v.chemin.replace(/\\$/, '')).join(' · ')}</span>
+          </div>
+          <span class="chip">{locaux.length} disque{locaux.length > 1 ? 's' : ''}</span>
+        </div>
+        <div class="jauge" class:plein={p >= 90} role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(p)} aria-label="Espace utilisé sur l'ensemble des disques">
+          <span style:width="{p}%"></span>
+        </div>
+        <div class="vol-chiffres">
+          <span><strong>{octets(pcUtilise)}</strong> utilisés · {pourcentTexte(p)}</span>
+          <span>sur {octets(pcTotal)}</span>
+        </div>
+        <button class="btn-primary" onclick={lancerPC}>
+          <Icon name="scope" size={16} /> Analyser tout le PC
+        </button>
+      </article>
+    {/if}
+
     {#each app.volumes as v (v.chemin)}
       {@const utilise = v.total - v.libre}
       {@const p = pourcent(utilise, v.total)}
@@ -209,5 +238,13 @@
   }
   .dossier {
     border-style: dashed;
+  }
+  .pc {
+    border-color: color-mix(in srgb, var(--action) 45%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--action) 10%, transparent);
+  }
+  .pc .vol-icon {
+    background: color-mix(in srgb, var(--action) 14%, transparent);
+    color: var(--action);
   }
 </style>

@@ -77,6 +77,25 @@ export async function lancer(chemin) {
   return ok
 }
 
+// Analyse de tous les disques internes et externes, réunis sous « Ce PC ».
+export async function lancerPC() {
+  app.erreur = ''
+  let ok = true
+  try {
+    await call('LancerPC', $state.snapshot(app.filtres))
+    app.selection = null
+    app.page = 'analyse'
+  } catch (err) {
+    app.erreur = message(err)
+    ok = false
+  }
+  await refresh()
+  return ok
+}
+
+// Relance l'analyse affichée, qu'il s'agisse d'un dossier ou de tout le PC.
+export const relancer = () => (app.etat?.scan?.pc ? lancerPC() : lancer(app.etat?.scan?.racine))
+
 export async function choisirEtLancer() {
   app.erreur = ''
   try {

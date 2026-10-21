@@ -2,7 +2,7 @@
   // Édition des filtres. Avec une racine, « Appliquer » relance l'analyse ;
   // sans (page des disques), les filtres valent pour la prochaine analyse.
   import Icon from './Icon.svelte'
-  import { app, lancer } from './state.svelte.js'
+  import { app, relancer } from './state.svelte.js'
   import { TAILLES, AGES, decouper, joindre, filtresVides, actifs } from './filtres.js'
 
   let { racine = null, onfermer } = $props()
@@ -25,7 +25,7 @@
       return
     }
     occupe = true
-    const ok = await lancer(racine)
+    const ok = await relancer()
     occupe = false
     if (ok) onfermer?.()
     else app.filtres = precedents // regex invalide, motif refusé… : on garde le panneau ouvert

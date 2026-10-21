@@ -7,7 +7,7 @@
   import { call, message, montrer } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, dateCourte, dateLongue } from './format.js'
 
-  let { gen, mode, tri = $bindable({ colonne: '', inverse: false }), selection = $bindable(null) } = $props()
+  let { gen, mode, pc = false, tri = $bindable({ colonne: '', inverse: false }), selection = $bindable(null) } = $props()
 
   let racine = $state(null)
   let erreurRacine = $state('')
@@ -214,7 +214,7 @@
               <Icon name="chevron" size={14} />
             </button>
             <button class="nom-btn" onclick={() => choisir(n)} ondblclick={() => basculer(n)} title={prof === 0 ? e.nom : e.type === 'reste' ? undefined : 'Clic : sélectionner · double-clic : déplier'}>
-              <span class="type t-{e.type}"><Icon name={icone[e.type]} size={16} /></span>
+              <span class="type t-{e.type}"><Icon name={pc && prof === 0 ? 'scope' : pc && prof === 1 ? 'disk' : icone[e.type]} size={16} /></span>
               <span class="nom" class:italique={e.type === 'fichiers' || e.type === 'reste'}>{libelle(e)}</span>
               {#if e.erreurs > 0 && e.type === 'dossier'}
                 <span class="chip warn" title="{nombre(e.erreurs)} dossier{e.erreurs > 1 ? 's' : ''} illisible{e.erreurs > 1 ? 's' : ''} dans cette branche">
@@ -233,7 +233,7 @@
           <span class="num c-dossiers" role="gridcell">{e.type === 'dossier' || e.type === 'reste' ? nombre(e.dossiers) : ''}</span>
           <span class="num c-modif" role="gridcell" title={e.type === 'fichier' ? `Modifié le ${dateLongue(e.modif)}` : e.modif ? `Fichier le plus récent : ${dateLongue(e.modif)}` : 'Aucun fichier'}>{dateCourte(e.modif)}</span>
           <span class="c-act" role="gridcell">
-            {#if e.type !== 'reste'}
+            {#if e.type !== 'reste' && !(pc && prof === 0)}
               <button class="ouvrir" title="Montrer dans l'Explorateur" aria-label="Montrer dans l'Explorateur" onclick={() => ouvrirExplorateur(n)}>
                 <Icon name="external" size={15} />
               </button>

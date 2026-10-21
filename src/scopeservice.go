@@ -75,8 +75,33 @@ func (s *ScopeService) Lancer(chemin string, filtres scan.Filtres) error {
 	if err != nil {
 		return fmt.Errorf("impossible d'analyser %s : %w", chemin, err)
 	}
-	attendu := volumes.Utilise(nouveau.Racine())
+	s.remplacer(nouveau, volumes.Utilise(nouveau.Racine()))
+	return nil
+}
 
+// NomPC est le nom de la racine virtuelle qui réunit tous les disques.
+const NomPC = "Ce PC"
+
+// LancerPC analyse tous les disques internes et externes en même temps
+// (pas les lecteurs réseau ni optiques), avec les filtres.
+func (s *ScopeService) LancerPC(filtres scan.Filtres) error {
+	disques := volumes.Locaux()
+	var racines []string
+	var attendu int64
+	for _, v := range disques {
+		racines = append(racines, v.Chemin)
+		attendu += v.Total - v.Libre
+	}
+	nouveau, err := scan.LancerPC(NomPC, racines, filtres)
+	if err != nil {
+		return fmt.Errorf("impossible d'analyser le PC : %w", err)
+	}
+	s.remplacer(nouveau, attendu)
+	return nil
+}
+
+// remplacer installe un nouveau scan et arrête le précédent.
+func (s *ScopeService) remplacer(nouveau *scan.Scan, attendu int64) {
 	s.mu.Lock()
 	ancien := s.scan
 	s.scan, s.attendu = nouveau, attendu
@@ -85,7 +110,6 @@ func (s *ScopeService) Lancer(chemin string, filtres scan.Filtres) error {
 	if ancien != nil {
 		ancien.Arreter()
 	}
-	return nil
 }
 
 // Arreter interrompt l'analyse en cours ; le résultat partiel reste affiché.

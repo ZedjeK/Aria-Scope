@@ -20,6 +20,17 @@ func TestLister(t *testing.T) {
 	}
 }
 
+func TestLocaux(t *testing.T) {
+	for _, v := range Locaux() {
+		if v.Type != "fixe" && v.Type != "amovible" {
+			t.Errorf("%s (%s) ne devrait pas faire partie des disques locaux", v.Chemin, v.Type)
+		}
+	}
+	if len(Locaux()) == 0 {
+		t.Error("aucun disque local")
+	}
+}
+
 func TestUtiliseHorsRacine(t *testing.T) {
 	dossier := "/usr"
 	if runtime.GOOS == "windows" {

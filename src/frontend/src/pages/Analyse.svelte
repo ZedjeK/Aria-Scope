@@ -8,7 +8,7 @@
   import Ages from '../lib/Ages.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
   import { resume, actifs } from '../lib/filtres.js'
-  import { app, lancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
+  import { app, relancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
 
   const scan = $derived(app.etat?.scan)
@@ -46,7 +46,7 @@
           <button class="btn-ghost" class:on={app.panneauFiltres || filtresScan} aria-expanded={app.panneauFiltres} onclick={() => (app.panneauFiltres = !app.panneauFiltres)}>
             <Icon name="filter" size={16} /> Filtres{#if filtresScan}<span class="compte">{resume(filtresScan).length}</span>{/if}
           </button>
-          <button class="btn-ghost" onclick={() => lancer(scan.racine)}><Icon name="refresh" size={16} /> Relancer</button>
+          <button class="btn-ghost" onclick={relancer}><Icon name="refresh" size={16} /> Relancer</button>
           <button class="btn-ghost" onclick={() => (app.page = 'accueil')}><Icon name="scope" size={16} /> Nouvelle analyse</button>
         {/if}
       </div>
@@ -116,7 +116,7 @@
               <button role="tab" aria-selected={app.vue === 'ages'} class:on={app.vue === 'ages'} onclick={() => (app.vue = 'ages')}>âge</button>
             </div>
             {#if app.vue === 'arbre'}
-              <Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} />
+              <Arbre {gen} mode={app.mode} pc={scan.pc} bind:tri={app.tri} bind:selection={app.selection} />
             {:else if app.vue === 'gros'}
               <GrosFichiers {gen} mode={app.mode} bind:selection={app.selection} />
             {:else if app.vue === 'types'}

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,6 +64,7 @@ type Progression struct {
 	Erreurs  int64  `json:"erreurs"`
 	Liens    int64  `json:"liens"`
 	Ecartes  int64  `json:"ecartes"` // fichiers écartés par les filtres
+	PC       bool   `json:"pc"`      // analyse de tous les disques
 	Courant  string `json:"courant"`
 	DureeMs  int64  `json:"dureeMs"`
 }
@@ -94,6 +96,7 @@ type Scan struct {
 	duree   time.Duration
 	noeuds  []*Dossier // index = id, rempli à la fin
 	racineD *Dossier
+	pc      bool // plusieurs disques sous une racine virtuelle
 }
 
 // ErrPasUnDossier : la cible du scan n'est pas un dossier.
@@ -114,27 +117,85 @@ func Lancer(racine string) (*Scan, error) { return LancerAvec(racine, Filtres{})
 
 // LancerAvec démarre le scan de racine en ne comptant que ce que f retient.
 func LancerAvec(racine string, f Filtres) (*Scan, error) {
-	abs, err := filepath.Abs(racine)
+	abs, err := verifierDossier(racine)
 	if err != nil {
 		return nil, err
+	}
+	s, ctx, err := preparer(abs, f)
+	if err != nil {
+		return nil, err
+	}
+	s.racineD = &Dossier{nom: abs}
+	s.demarrer(ctx, func() { s.parcourir(ctx, s.racineD, abs) })
+	return s, nil
+}
+
+// ErrAucunDisque : aucune des racines demandées n'est lisible.
+var ErrAucunDisque = errors.New("aucun disque à analyser")
+
+// ErrRacineVirtuelle : la racine d'une analyse de plusieurs disques n'est
+// pas un vrai dossier (on ne peut pas l'ouvrir dans l'Explorateur).
+var ErrRacineVirtuelle = errors.New("« Ce PC » regroupe les disques : ce n'est pas un dossier")
+
+// LancerPC analyse plusieurs racines (les disques de la machine) en même
+// temps, réunies sous une racine virtuelle appelée nom. Chaque disque est lu
+// par son propre parcours : un disque lent ne retient pas les autres.
+func LancerPC(nom string, racines []string, f Filtres) (*Scan, error) {
+	var disques []string
+	for _, r := range racines {
+		if abs, err := verifierDossier(r); err == nil && !slices.Contains(disques, abs) {
+			disques = append(disques, abs)
+		}
+	}
+	if len(disques) == 0 {
+		return nil, ErrAucunDisque
+	}
+	s, ctx, err := preparer(nom, f)
+	if err != nil {
+		return nil, err
+	}
+	s.pc = true
+	s.racineD = &Dossier{nom: nom}
+	for _, d := range disques {
+		s.racineD.enfants = append(s.racineD.enfants, &Dossier{nom: d, parent: s.racineD})
+	}
+	s.dossiers.Add(int64(len(disques)))
+	s.demarrer(ctx, func() {
+		for _, c := range s.racineD.enfants {
+			s.wg.Add(1)
+			go func() {
+				defer s.wg.Done()
+				s.parcourir(ctx, c, c.nom)
+			}()
+		}
+	})
+	return s, nil
+}
+
+func verifierDossier(chemin string) (string, error) {
+	abs, err := filepath.Abs(chemin)
+	if err != nil {
+		return "", err
 	}
 	info, err := os.Stat(abs)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if !info.IsDir() {
-		return nil, ErrPasUnDossier
+		return "", ErrPasUnDossier
 	}
+	return abs, nil
+}
 
+func preparer(racine string, f Filtres) (*Scan, context.Context, error) {
 	maintenant := time.Now()
 	filtre, err := f.compiler(maintenant.Unix())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Scan{
-		racine:  abs,
+		racine:  racine,
 		debut:   maintenant,
 		ref:     maintenant.Unix(),
 		filtres: filtre.normalises(f),
@@ -143,13 +204,17 @@ func LancerAvec(racine string, f Filtres) (*Scan, error) {
 		sem:     make(chan struct{}, Parallelisme()),
 		fini:    make(chan struct{}),
 		etat:    EnCours,
-		racineD: &Dossier{nom: abs},
 	}
-	s.courant.Store(&abs)
+	s.courant.Store(&racine)
+	return s, ctx, nil
+}
 
+// demarrer lance le parcours en arrière-plan, puis finalise le résultat
+// quand tous les dossiers ont été lus (ou que le scan est arrêté).
+func (s *Scan) demarrer(ctx context.Context, parcours func()) {
 	s.wg.Add(1)
 	go func() {
-		s.parcourir(ctx, s.racineD, abs)
+		parcours()
 		s.wg.Done()
 		s.wg.Wait()
 
@@ -162,10 +227,9 @@ func LancerAvec(racine string, f Filtres) (*Scan, error) {
 			s.etat = Fini
 		}
 		s.mu.Unlock()
-		cancel()
+		s.arreter()
 		close(s.fini)
 	}()
-	return s, nil
 }
 
 // Arreter interrompt le scan ; le résultat partiel reste consultable.
@@ -294,6 +358,7 @@ func (s *Scan) Progression() Progression {
 		Erreurs:  s.erreurs.Load(),
 		Liens:    s.liens.Load(),
 		Ecartes:  s.ecartes.Load(),
+		PC:       s.pc,
 		DureeMs:  duree.Milliseconds(),
 	}
 	if etat == EnCours {
@@ -424,7 +489,15 @@ func (s *Scan) Chemin(id int32) (string, error) {
 	for ; d.parent != nil; d = d.parent {
 		noms = append(noms, d.nom)
 	}
-	morceaux := []string{s.racine}
+	base := s.racine
+	if s.pc {
+		// Le premier niveau sous « Ce PC » porte le chemin complet du disque.
+		if len(noms) == 0 {
+			return "", ErrRacineVirtuelle
+		}
+		base, noms = noms[len(noms)-1], noms[:len(noms)-1]
+	}
+	morceaux := []string{base}
 	for i := len(noms) - 1; i >= 0; i-- {
 		morceaux = append(morceaux, noms[i])
 	}
