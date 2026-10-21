@@ -64,7 +64,7 @@
             {:else}Dernière analyse{/if}
           </span>
           <span class="statut-chemin label"><bdi>{scan.racine}</bdi></span>
-          <span class="statut-taille label">{octets(app.mode === 'disque' ? scan.disque : scan.taille)}</span>
+          <span class="statut-taille label">{octets(app.mode === 'disque' ? scan.disque : scan.taille)}{#if app.etat?.filtres}<span class="filtree">filtrée</span>{/if}</span>
           {#if enCours}
             <span class="statut-barre" class:indefini={avance === null} aria-hidden="true">
               <span style:width={avance === null ? '35%' : `${Math.min(avance, 99)}%`}></span>
@@ -258,6 +258,19 @@
     font-size: 18px;
     font-weight: 600;
     color: #ffffff;
+  }
+  .filtree {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border-radius: 6px 0;
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+    color: var(--warn);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    vertical-align: middle;
   }
   .statut-barre {
     display: block;

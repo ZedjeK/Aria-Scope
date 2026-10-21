@@ -38,6 +38,8 @@
     <rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M11 4v16" /><path d="M11 13h10" /><path d="M16 13v7" />
   {:else if name === 'up'}
     <path d="M12 19V5" /><path d="M6 11l6-6 6 6" />
+  {:else if name === 'filter'}
+    <path d="M4 5h16l-6 7.5V19l-4 2v-8.5z" />
   {:else if name === 'warn'}
     <path d="M12 3l10 18H2z" /><path d="M12 10v5" /><path d="M12 18h.01" />
   {/if}

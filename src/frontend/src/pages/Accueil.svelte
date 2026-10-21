@@ -1,5 +1,7 @@
 <script>
   import Icon from '../lib/Icon.svelte'
+  import PanneauFiltres from '../lib/PanneauFiltres.svelte'
+  import { resume, actifs, filtresVides } from '../lib/filtres.js'
   import { app, lancer, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, pourcent, pourcentTexte } from '../lib/format.js'
 
@@ -12,10 +14,23 @@
 <section class="page">
   <div class="page-head">
     <h1>disques</h1>
+    <button class="btn-ghost filtres-btn" class:on={actifs(app.filtres)} aria-expanded={app.panneauFiltres} onclick={() => (app.panneauFiltres = !app.panneauFiltres)}>
+      <Icon name="filter" size={16} /> Filtres
+    </button>
   </div>
   <p class="page-intro">
     Choisis un disque ou un dossier : Aria le fouille en parallèle et te montre qui prend toute la place.
   </p>
+
+  {#if app.panneauFiltres}
+    <PanneauFiltres onfermer={() => (app.panneauFiltres = false)} />
+  {:else if actifs(app.filtres)}
+    <div class="filtres-actifs" role="status">
+      <span class="fa-titre"><Icon name="filter" size={14} /> Prochaine analyse filtrée</span>
+      {#each resume(app.filtres) as r (r)}<span class="chip warn">{r}</span>{/each}
+      <button class="lien" onclick={() => (app.filtres = filtresVides())}>effacer</button>
+    </div>
+  {/if}
 
   {#if enCours}
     <p class="banner">
@@ -70,6 +85,47 @@
 </section>
 
 <style>
+  .filtres-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filtres-btn.on {
+    border-color: color-mix(in srgb, var(--warn) 60%, transparent);
+    color: var(--warn);
+  }
+  .filtres-actifs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    background: color-mix(in srgb, var(--warn) 7%, transparent);
+  }
+  .fa-titre {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--warn);
+  }
+  .lien {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-decoration: underline;
+  }
+  .lien:hover {
+    color: var(--text);
+  }
   .volumes {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

@@ -33,6 +33,7 @@ type Etat struct {
 	Scan         *scan.Progression `json:"scan"` // nil : aucun scan lancé
 	Attendu      int64             `json:"attendu"`
 	Parallelisme int               `json:"parallelisme"`
+	Filtres      *scan.Filtres     `json:"filtres"` // filtres de l'analyse affichée ; nil s'il n'y en a pas
 }
 
 // Etat renvoie la version et l'avancement du scan.
@@ -44,6 +45,9 @@ func (s *ScopeService) Etat() Etat {
 	if sc != nil {
 		p := sc.Progression()
 		e.Scan = &p
+		if f := sc.Filtres(); f.Actifs() {
+			e.Filtres = &f
+		}
 	}
 	return e
 }
@@ -64,9 +68,10 @@ func (s *ScopeService) ChoisirDossier() (string, error) {
 		PromptForSingleSelection()
 }
 
-// Lancer démarre l'analyse de chemin (et arrête la précédente s'il y en a une).
-func (s *ScopeService) Lancer(chemin string) error {
-	nouveau, err := scan.Lancer(chemin)
+// Lancer démarre l'analyse de chemin en appliquant les filtres (et arrête la
+// précédente s'il y en a une).
+func (s *ScopeService) Lancer(chemin string, filtres scan.Filtres) error {
+	nouveau, err := scan.LancerAvec(chemin, filtres)
 	if err != nil {
 		return fmt.Errorf("impossible d'analyser %s : %w", chemin, err)
 	}

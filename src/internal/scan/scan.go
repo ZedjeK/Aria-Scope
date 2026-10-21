@@ -62,6 +62,7 @@ type Progression struct {
 	Disque   int64  `json:"disque"`
 	Erreurs  int64  `json:"erreurs"`
 	Liens    int64  `json:"liens"`
+	Ecartes  int64  `json:"ecartes"` // fichiers écartés par les filtres
 	Courant  string `json:"courant"`
 	DureeMs  int64  `json:"dureeMs"`
 }
@@ -80,6 +81,9 @@ type Scan struct {
 	gros                                               palmares
 	stats                                              stats
 	ref                                                int64 // date du scan, pour l'âge des fichiers
+	filtres                                            Filtres
+	filtre                                             *filtre
+	ecartes                                            atomic.Int64 // fichiers écartés par les filtres
 
 	cacheMu sync.Mutex // statistiques de la dernière branche relue
 	cache   *stats
@@ -105,8 +109,11 @@ func Parallelisme() int {
 	return max(8, min(n, 32))
 }
 
-// Lancer démarre le scan de racine en arrière-plan.
-func Lancer(racine string) (*Scan, error) {
+// Lancer démarre le scan de racine en arrière-plan, sans filtre.
+func Lancer(racine string) (*Scan, error) { return LancerAvec(racine, Filtres{}) }
+
+// LancerAvec démarre le scan de racine en ne comptant que ce que f retient.
+func LancerAvec(racine string, f Filtres) (*Scan, error) {
 	abs, err := filepath.Abs(racine)
 	if err != nil {
 		return nil, err
@@ -119,11 +126,19 @@ func Lancer(racine string) (*Scan, error) {
 		return nil, ErrPasUnDossier
 	}
 
+	maintenant := time.Now()
+	filtre, err := f.compiler(maintenant.Unix())
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Scan{
 		racine:  abs,
-		debut:   time.Now(),
-		ref:     time.Now().Unix(),
+		debut:   maintenant,
+		ref:     maintenant.Unix(),
+		filtres: filtre.normalises(f),
+		filtre:  filtre,
 		arreter: cancel,
 		sem:     make(chan struct{}, Parallelisme()),
 		fini:    make(chan struct{}),
@@ -176,7 +191,11 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 			d.nLiens++
 			s.liens.Add(1)
 		case e.Dossier:
-			sousDossiers = append(sousDossiers, &Dossier{nom: e.Nom, parent: d})
+			if s.filtre.garderDossier(e.Nom) {
+				sousDossiers = append(sousDossiers, &Dossier{nom: e.Nom, parent: d})
+			}
+		case !s.filtre.garderFichier(e):
+			s.ecartes.Add(1)
 		default:
 			d.nFichiers++
 			d.fTaille += e.Taille
@@ -218,6 +237,9 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 
 // finaliser numérote les dossiers et remonte les totaux vers la racine.
 func (s *Scan) finaliser() {
+	if s.filtre.elaguer {
+		elaguer(s.racineD)
+	}
 	noeuds := []*Dossier{s.racineD}
 	for i := 0; i < len(noeuds); i++ {
 		d := noeuds[i]
@@ -245,10 +267,14 @@ func (s *Scan) finaliser() {
 			p.liens += d.liens
 		}
 	}
+	s.dossiers.Store(int64(len(noeuds) - 1)) // après l'élagage des dossiers sans fichier retenu
 	s.mu.Lock()
 	s.noeuds = noeuds
 	s.mu.Unlock()
 }
+
+// Filtres renvoie les filtres appliqués à ce scan.
+func (s *Scan) Filtres() Filtres { return s.filtres }
 
 // Progression renvoie l'avancement (compteurs en direct pendant le scan).
 func (s *Scan) Progression() Progression {
@@ -267,6 +293,7 @@ func (s *Scan) Progression() Progression {
 		Disque:   s.disque.Load(),
 		Erreurs:  s.erreurs.Load(),
 		Liens:    s.liens.Load(),
+		Ecartes:  s.ecartes.Load(),
 		DureeMs:  duree.Milliseconds(),
 	}
 	if etat == EnCours {
@@ -375,7 +402,7 @@ func (s *Scan) Fichiers(id int32, mode string, t Tri, limite int) ([]Entree, err
 	}
 	var lignes []Entree
 	err = listerDossier(chemin, func(e entree) {
-		if e.Dossier || e.Lien {
+		if e.Dossier || e.Lien || !s.filtre.garderFichier(e) {
 			return
 		}
 		lignes = append(lignes, Entree{ID: id, Type: "fichier", Nom: e.Nom, Taille: e.Taille, Disque: e.Disque, Modif: e.Modif, Fichiers: 1})

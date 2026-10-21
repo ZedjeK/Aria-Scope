@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.2 · Windows 10/11 x64 · licence MIT
+  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.3 · Windows 10/11 x64 · licence MIT
 </p>
 
 ## Ce qu'il fait
@@ -24,6 +24,9 @@
 | **Treemap néon** | Chaque rectangle a la surface de ce qu'il pèse, une couleur par grande branche. Survol pour le détail, double-clic pour plonger dans un dossier, fil d'Ariane pour remonter |
 | **Anneau** | La répartition du dossier sélectionné entre ses 8 plus gros éléments ; un clic sur une part plonge dedans |
 | **Tout est relié** | Ce que tu sélectionnes dans l'arbre s'allume sur la carte et l'anneau, et l'inverse : l'arbre se déplie tout seul jusqu'à la bonne ligne |
+| **Plus gros fichiers** | Les 1 000 plus gros fichiers de l'analyse, relevés pendant le scan, triables, avec leur dossier ; un clic les retrouve dans l'arbre et sur la carte |
+| **Types et âge** | La répartition par famille (vidéos, archives, jeux, impression 3D…) et par extension, puis par date de modification, pour voir ce qui dort depuis des années. Pour toute l'analyse ou un seul dossier |
+| **Filtres** | Exclure des dossiers ou des fichiers (`node_modules`, `*.tmp`), ne garder que certains types (`*.mkv`), une regex, une taille ou une ancienneté minimales. Appliqués pendant le scan, donc tout reste cohérent ; un bandeau rappelle qu'une analyse est filtrée |
 | **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
 | **Fichiers à la demande** | Les fichiers d'un dossier sont relus au moment où tu les déplies : la liste reflète le disque, et la mémoire reste légère même sur un disque entier |
 | **Explorateur** | Un clic sur ↗ ouvre le dossier, ou sélectionne le fichier, dans l'Explorateur Windows |
@@ -51,11 +54,10 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 ## Feuille de route
 
-- **Enquête** : les plus gros fichiers, la répartition par type, par âge et par propriétaire, des filtres
 - **Ménage** : corbeille, déplacer, copier, archiver, renommage en masse, menu contextuel, annulation
 - **Recherche** : recherche multicritère, chemins trop longs, doublons vérifiés par SHA-256
 - **Export et historique** : CSV, HTML, Excel, PDF, SQLite ; analyses sauvegardées et comparées
-- **Plus tard** : détails NTFS, ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
+- **Plus tard** : détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
 
 ## Licence
 

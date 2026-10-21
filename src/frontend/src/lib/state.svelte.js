@@ -1,5 +1,6 @@
 // État partagé de l'interface et appels au backend Go (ScopeService).
 import { Call } from '@wailsio/runtime'
+import { filtresVides } from './filtres.js'
 
 export const call = (method, ...args) => Call.ByName(`main.ScopeService.${method}`, ...args)
 export const message = (err) => String(err?.message ?? err)
@@ -14,6 +15,8 @@ export const app = $state({
   visuel: 'carte', // dans ce panneau : "carte" (treemap) ou "anneau"
   vue: 'arbre', // colonne principale : "arbre", "gros" (plus gros fichiers), "types" ou "ages"
   portee: 'tout', // statistiques : "tout" (l'analyse) ou "selection" (le dossier choisi)
+  filtres: filtresVides(), // appliqués aux prochaines analyses (voir filtres.js)
+  panneauFiltres: false,
   selection: null, // partagée entre l'arbre et la carte (voir selection.js)
   erreur: '',
   loadError: '',
@@ -57,16 +60,21 @@ export function suivre() {
   }, 300)
 }
 
+// Lance l'analyse de chemin avec les filtres en cours ; renvoie false si le
+// moteur l'a refusée (dossier introuvable, filtre invalide…).
 export async function lancer(chemin) {
   app.erreur = ''
-  app.selection = null
+  let ok = true
   try {
-    await call('Lancer', chemin)
+    await call('Lancer', chemin, $state.snapshot(app.filtres))
+    app.selection = null
     app.page = 'analyse'
   } catch (err) {
     app.erreur = message(err)
+    ok = false
   }
   await refresh()
+  return ok
 }
 
 export async function choisirEtLancer() {

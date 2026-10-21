@@ -152,7 +152,7 @@ func (s *Scan) relireBranche(d *Dossier, chemin string, fn func(*statsLocales)) 
 			for t := range taches {
 				var local statsLocales
 				_ = listerDossier(t.chemin, func(e entree) {
-					if !e.Dossier && !e.Lien {
+					if !e.Dossier && !e.Lien && s.filtre.garderFichier(e) {
 						local.ajouter(e, s.ref)
 					}
 				})
