@@ -12,7 +12,8 @@ export const app = $state({
   tri: { colonne: '', inverse: false }, // colonne vide : la taille du mode
   carte: true, // panneau des visuels affiché à côté de l'arbre
   visuel: 'carte', // dans ce panneau : "carte" (treemap) ou "anneau"
-  vue: 'arbre', // colonne principale : "arbre", "gros" (plus gros fichiers) ou "types"
+  vue: 'arbre', // colonne principale : "arbre", "gros" (plus gros fichiers), "types" ou "ages"
+  portee: 'tout', // statistiques : "tout" (l'analyse) ou "selection" (le dossier choisi)
   selection: null, // partagée entre l'arbre et la carte (voir selection.js)
   erreur: '',
   loadError: '',

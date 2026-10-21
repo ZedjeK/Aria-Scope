@@ -2,10 +2,11 @@
   // Répartition par type de fichier : familles (Vidéos, Archives…) dépliables
   // en extensions. Pour toute l'analyse, ou pour le dossier sélectionné.
   import Icon from './Icon.svelte'
+  import Portee from './Portee.svelte'
   import { call, message } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
 
-  let { gen, mode, selection } = $props()
+  let { gen, mode, selection, portee = $bindable('tout') } = $props()
 
   const COULEURS = {
     Vidéos: '#ff6fae',
@@ -25,29 +26,12 @@
     Autres: '#3b5378',
   }
 
-  let portee = $state('tout') // "tout" ou "selection"
   let familles = $state(null)
   let erreur = $state('')
   let chargement = $state(false)
   let ouvertes = $state({})
 
-  // Le dossier de la sélection (des fichiers : celui qui les contient)
-  const idSelection = $derived(selection ? selection.id : 0)
-  const id = $derived(portee === 'selection' ? idSelection : 0)
-  let nomSelection = $state('')
-
-  $effect(() => {
-    const g = gen
-    const i = idSelection
-    if (!i) {
-      nomSelection = ''
-      if (portee === 'selection') portee = 'tout'
-      return
-    }
-    call('Fil', g, i)
-      .then((f) => g === gen && i === idSelection && (nomSelection = f?.at(-1)?.nom ?? ''))
-      .catch(() => {})
-  })
+  const id = $derived(portee === 'selection' && selection ? selection.id : 0)
 
   $effect(() => {
     const g = gen
@@ -70,12 +54,7 @@
 
 <div class="types">
   <div class="tete">
-    <div class="portee" role="radiogroup" aria-label="Portée">
-      <button role="radio" aria-checked={portee === 'tout'} class:on={portee === 'tout'} onclick={() => (portee = 'tout')}>toute l'analyse</button>
-      <button role="radio" aria-checked={portee === 'selection'} class:on={portee === 'selection'} disabled={!idSelection} onclick={() => (portee = 'selection')} title={idSelection ? nomSelection : 'Sélectionne un dossier dans l\'arbre ou sur la carte'}>
-        {idSelection ? `dans ${nomSelection || '…'}` : 'dossier sélectionné'}
-      </button>
-    </div>
+    <Portee {gen} {selection} bind:portee />
     {#if chargement}<span class="hint">lecture…</span>{/if}
   </div>
 
@@ -135,35 +114,6 @@
     padding: 0 10px;
     background: var(--surface-sunken);
     border-bottom: 1px solid var(--line-soft);
-  }
-  .portee {
-    display: inline-flex;
-    padding: 3px;
-    border: 1px solid var(--line-strong);
-    border-radius: 10px 0;
-    corner-shape: bevel;
-  }
-  .portee button {
-    max-width: 260px;
-    min-height: 30px;
-    padding: 0 12px;
-    border: none;
-    border-radius: 8px 0;
-    corner-shape: bevel;
-    background: none;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .portee button.on {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-    color: var(--accent);
-  }
-  .portee button:disabled {
-    opacity: 0.45;
   }
   .liste,
   .exts {
@@ -264,13 +214,24 @@
     padding: 4px 52px;
   }
 
+  /* Colonne étroite : on garde les barres, on retire le nombre de fichiers */
   @container (max-width: 640px) {
     .famille,
     .ext {
-      grid-template-columns: 18px 12px minmax(0, 1fr) 80px 52px;
+      grid-template-columns: 18px 12px minmax(96px, 1.3fr) minmax(40px, 1fr) 76px 48px;
+      gap: 8px;
+      padding: 0 10px;
     }
-    .barre,
     .discret {
+      display: none;
+    }
+  }
+  @container (max-width: 400px) {
+    .famille,
+    .ext {
+      grid-template-columns: 18px 12px minmax(0, 1fr) 76px 48px;
+    }
+    .barre {
       display: none;
     }
   }

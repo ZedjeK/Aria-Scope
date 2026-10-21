@@ -5,6 +5,7 @@
   import Anneau from '../lib/Anneau.svelte'
   import GrosFichiers from '../lib/GrosFichiers.svelte'
   import Types from '../lib/Types.svelte'
+  import Ages from '../lib/Ages.svelte'
   import { app, lancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
 
@@ -95,13 +96,16 @@
               <button role="tab" aria-selected={app.vue === 'arbre'} class:on={app.vue === 'arbre'} onclick={() => (app.vue = 'arbre')}>arbre</button>
               <button role="tab" aria-selected={app.vue === 'gros'} class:on={app.vue === 'gros'} onclick={() => (app.vue = 'gros')}>gros fichiers</button>
               <button role="tab" aria-selected={app.vue === 'types'} class:on={app.vue === 'types'} onclick={() => (app.vue = 'types')}>types</button>
+              <button role="tab" aria-selected={app.vue === 'ages'} class:on={app.vue === 'ages'} onclick={() => (app.vue = 'ages')}>âge</button>
             </div>
             {#if app.vue === 'arbre'}
               <Arbre {gen} mode={app.mode} bind:tri={app.tri} bind:selection={app.selection} />
             {:else if app.vue === 'gros'}
               <GrosFichiers {gen} mode={app.mode} bind:selection={app.selection} />
+            {:else if app.vue === 'types'}
+              <Types {gen} mode={app.mode} selection={app.selection} bind:portee={app.portee} />
             {:else}
-              <Types {gen} mode={app.mode} selection={app.selection} />
+              <Ages {gen} mode={app.mode} selection={app.selection} bind:portee={app.portee} />
             {/if}
           </div>
           {#if app.carte}

@@ -78,7 +78,12 @@ type Scan struct {
 	fichiers, dossiers, taille, disque, erreurs, liens atomic.Int64
 	courant                                            atomic.Pointer[string]
 	gros                                               palmares
-	types                                              statsTypes
+	stats                                              stats
+	ref                                                int64 // date du scan, pour l'âge des fichiers
+
+	cacheMu sync.Mutex // statistiques de la dernière branche relue
+	cache   *stats
+	cacheID int32
 
 	mu      sync.RWMutex
 	etat    string
@@ -118,6 +123,7 @@ func Lancer(racine string) (*Scan, error) {
 	s := &Scan{
 		racine:  abs,
 		debut:   time.Now(),
+		ref:     time.Now().Unix(),
 		arreter: cancel,
 		sem:     make(chan struct{}, Parallelisme()),
 		fini:    make(chan struct{}),
@@ -163,7 +169,7 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 	s.courant.Store(&chemin)
 
 	var sousDossiers []*Dossier
-	var exts map[string]*compteur // fichiers de ce dossier par extension
+	var loc statsLocales // fichiers de ce dossier, par extension et par âge
 	err := listerDossier(chemin, func(e entree) {
 		switch {
 		case e.Lien:
@@ -180,23 +186,14 @@ func (s *Scan) parcourir(ctx context.Context, d *Dossier, chemin string) {
 			s.taille.Add(e.Taille)
 			s.disque.Add(e.Disque)
 			s.gros.proposer(d, e)
-			if exts == nil {
-				exts = map[string]*compteur{}
-			}
-			ext := extension(e.Nom)
-			c := exts[ext]
-			if c == nil {
-				c = &compteur{}
-				exts[ext] = c
-			}
-			c.ajouter(e)
+			loc.ajouter(e, s.ref)
 		}
 	})
 	if err != nil {
 		d.illisible = true
 		s.erreurs.Add(1)
 	}
-	s.types.fusionner(exts)
+	s.stats.fusionner(&loc)
 	d.enfants = sousDossiers
 	s.dossiers.Add(int64(len(sousDossiers)))
 

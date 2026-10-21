@@ -9,6 +9,7 @@ func TestExtension(t *testing.T) {
 	cas := map[string]string{
 		"film.MKV": "mkv", "archive.tar.gz": "gz", ".gitignore": "", "LISEZMOI": "",
 		"photo.": "", "bizarre.extension-trop-longue": "", "deux mots.a b": "",
+		"libLLVM.so.20.1": "so", "sauvegarde.zip.001": "zip", "ls.1": "", "archive.7z": "7z",
 	}
 	for nom, attendu := range cas {
 		if got := extension(nom); got != attendu {

@@ -150,6 +150,15 @@ func (s *ScopeService) Types(gen int, id int32, mode string) ([]scan.Famille, er
 	return sc.Types(id, mode)
 }
 
+// Ages renvoie la répartition par âge du dossier id (0 : toute l'analyse).
+func (s *ScopeService) Ages(gen int, id int32) ([]scan.Age, error) {
+	sc, err := s.courant(gen)
+	if err != nil {
+		return nil, err
+	}
+	return sc.Ages(id)
+}
+
 // Carte renvoie les blocs de la treemap du dossier id, mesurés selon mode.
 func (s *ScopeService) Carte(gen int, id int32, mode string) (scan.Bloc, error) {
 	sc, err := s.courant(gen)
