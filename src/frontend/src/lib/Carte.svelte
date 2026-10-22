@@ -4,7 +4,7 @@
   import { untrack } from 'svelte'
   import Icon from './Icon.svelte'
   import { selectionDe, estBlocChoisi } from './selection.js'
-  import { call, message, montrer } from './state.svelte.js'
+  import { call, message, montrer, choisirSeul } from './state.svelte.js'
   import { octets, nombre, pourcentTexte, pourcent } from './format.js'
   import { disposer } from './treemap.js'
 
@@ -103,7 +103,10 @@
 
   function cliquer(evt) {
     const t = tuileDe(evt)
-    if (t && t.bloc.type !== 'reste') selection = selectionDe(t.bloc, 'carte')
+    if (t && t.bloc.type !== 'reste') {
+      selection = selectionDe(t.bloc, 'carte')
+      choisirSeul(t.bloc)
+    }
   }
 
   function plonger(evt) {
@@ -111,6 +114,7 @@
     if (t?.bloc.type === 'dossier' && t.bloc.ouvrable) {
       survol = null
       selection = selectionDe(t.bloc, 'carte')
+      choisirSeul(t.bloc)
       racineId = t.bloc.id
     }
   }

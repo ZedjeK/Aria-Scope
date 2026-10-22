@@ -3,8 +3,8 @@
   // enfants sont demandés au moteur Go, déjà triés selon la colonne choisie.
   import { tick, untrack } from 'svelte'
   import Icon from './Icon.svelte'
-  import { selectionDe, estLigneChoisie } from './selection.js'
-  import { call, message, montrer } from './state.svelte.js'
+  import { estLigneChoisie } from './selection.js'
+  import { call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, dateCourte, dateLongue } from './format.js'
 
   let { gen, mode, pc = false, tri = $bindable({ colonne: '', inverse: false }), selection = $bindable(null) } = $props()
@@ -42,7 +42,7 @@
 
   // ---------- Sélection, partagée avec la carte ----------
 
-  const choisir = (n) => (selection = selectionDe(n.e, 'arbre'))
+  const choisir = (n, evt) => cliquerElement(n.e, 'arbre', evt, lignes.filter((l) => !l.etat).map((l) => l.n.e))
 
   // Choisi ailleurs (carte, anneau) : on déplie le chemin jusqu'à la ligne et on la montre.
   async function reveler(sel) {
@@ -207,13 +207,13 @@
       {:else}
         {@const e = n.e}
         {@const p = parent ? pourcent(valeur(e), valeur(parent.e)) : 100}
-        {@const choisie = estLigneChoisie(selection, e)}
+        {@const choisie = estMarque(e) || estLigneChoisie(selection, e)}
         <div class="ligne" class:racine={prof === 0} class:attenue={e.type === 'reste'} class:choisie role="row" aria-level={prof + 1} aria-expanded={e.ouvrable ? n.ouvert : undefined} aria-selected={choisie} style:--prof={prof}>
           <div class="c-nom" role="gridcell">
             <button class="pli" class:ouvert={n.ouvert} class:invisible={!e.ouvrable} tabindex={e.ouvrable ? 0 : -1} onclick={() => basculer(n)} aria-label={n.ouvert ? 'Replier' : 'Déplier'}>
               <Icon name="chevron" size={14} />
             </button>
-            <button class="nom-btn" onclick={() => choisir(n)} ondblclick={() => basculer(n)} title={prof === 0 ? e.nom : e.type === 'reste' ? undefined : 'Clic : sélectionner · double-clic : déplier'}>
+            <button class="nom-btn" onclick={(evt) => choisir(n, evt)} ondblclick={() => basculer(n)} title={prof === 0 ? e.nom : e.type === 'reste' ? undefined : 'Clic : sélectionner · Ctrl ou Maj : plusieurs · double-clic : déplier'}>
               <span class="type t-{e.type}"><Icon name={pc && prof === 0 ? 'scope' : pc && prof === 1 ? 'disk' : icone[e.type]} size={16} /></span>
               <span class="nom" class:italique={e.type === 'fichiers' || e.type === 'reste'}>{libelle(e)}</span>
               {#if e.erreurs > 0 && e.type === 'dossier'}
@@ -265,6 +265,9 @@
   }
   .ligne:hover:not(.entete) {
     background: var(--hover);
+  }
+  .ligne {
+    user-select: none; /* Maj+clic sélectionne des lignes, pas du texte */
   }
   .entete {
     position: sticky;

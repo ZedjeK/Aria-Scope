@@ -206,6 +206,15 @@ func (s *ScopeService) Ages(gen int, id int32) ([]scan.Age, error) {
 	return sc.Ages(id)
 }
 
+// Resumer récapitule une sélection (doublons écartés).
+func (s *ScopeService) Resumer(gen int, cibles []scan.Cible) (scan.Resume, error) {
+	sc, err := s.courant(gen)
+	if err != nil {
+		return scan.Resume{}, err
+	}
+	return sc.Resumer(cibles)
+}
+
 // Carte renvoie les blocs de la treemap du dossier id, mesurés selon mode.
 func (s *ScopeService) Carte(gen int, id int32, mode string) (scan.Bloc, error) {
 	sc, err := s.courant(gen)

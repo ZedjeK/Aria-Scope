@@ -1,6 +1,7 @@
 // État partagé de l'interface et appels au backend Go (ScopeService).
 import { Call } from '@wailsio/runtime'
 import { filtresVides } from './filtres.js'
+import { selectionDe, marquable, cibleDe, cleMarque } from './selection.js'
 
 export const call = (method, ...args) => Call.ByName(`main.ScopeService.${method}`, ...args)
 export const message = (err) => String(err?.message ?? err)
@@ -20,6 +21,8 @@ export const app = $state({
   reglages: { analyseAuto: true },
   demarrageAuto: false, // l'analyse de tout le PC va démarrer d'elle-même
   selection: null, // partagée entre l'arbre et la carte (voir selection.js)
+  marques: [], // sélection multiple : cibles des actions de ménage
+  ancre: null, // point de départ d'une sélection Maj+clic
   erreur: '',
   loadError: '',
 })
@@ -71,6 +74,7 @@ export async function lancer(chemin) {
   try {
     await call('Lancer', chemin, $state.snapshot(app.filtres))
     app.selection = null
+    app.marques = []
     app.page = 'analyse'
   } catch (err) {
     app.erreur = message(err)
@@ -87,6 +91,7 @@ export async function lancerPC() {
   try {
     await call('LancerPC', $state.snapshot(app.filtres))
     app.selection = null
+    app.marques = []
     app.page = 'analyse'
   } catch (err) {
     app.erreur = message(err)
@@ -116,6 +121,50 @@ export async function setAnalyseAuto(actif) {
   } catch (err) {
     app.erreur = message(err)
   }
+}
+
+// Clic sur un élément d'une liste (arbre, gros fichiers) : comme dans
+// l'Explorateur, Ctrl ajoute ou retire, Maj étend depuis le dernier clic,
+// un clic simple ne garde que lui. liste : les éléments visibles, dans l'ordre.
+export function cliquerElement(e, origine, evt, liste = []) {
+  app.selection = selectionDe(e, origine)
+  if (!marquable(e)) {
+    app.marques = []
+    return
+  }
+  const c = cibleDe(e)
+  const cle = cleMarque(c)
+  if (evt?.ctrlKey || evt?.metaKey) {
+    const i = app.marques.findIndex((m) => cleMarque(m) === cle)
+    if (i >= 0) app.marques.splice(i, 1)
+    else app.marques.push(c)
+    app.ancre = c
+    return
+  }
+  if (evt?.shiftKey && app.ancre) {
+    const cibles = liste.filter(marquable).map(cibleDe)
+    const a = cibles.findIndex((m) => cleMarque(m) === cleMarque(app.ancre))
+    const b = cibles.findIndex((m) => cleMarque(m) === cle)
+    if (a >= 0 && b >= 0) {
+      app.marques = cibles.slice(Math.min(a, b), Math.max(a, b) + 1)
+      return
+    }
+  }
+  app.marques = [c]
+  app.ancre = c
+}
+
+// Choix sur la carte ou l'anneau : la sélection multiple se réduit à cet élément.
+export function choisirSeul(e) {
+  app.marques = marquable(e) ? [cibleDe(e)] : []
+  app.ancre = app.marques[0] ?? null
+}
+
+export const estMarque = (e) => marquable(e) && app.marques.some((m) => cleMarque(m) === cleMarque(cibleDe(e)))
+
+export function toutDeselectionner() {
+  app.marques = []
+  app.ancre = null
 }
 
 // Relance l'analyse affichée, qu'il s'agisse d'un dossier ou de tout le PC.

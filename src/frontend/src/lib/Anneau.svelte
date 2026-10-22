@@ -3,7 +3,7 @@
   // gros éléments, le reste regroupé. Cliquer sur une part la sélectionne (et
   // l'anneau plonge dedans si c'est un dossier).
   import Icon from './Icon.svelte'
-  import { call, message } from './state.svelte.js'
+  import { call, message, choisirSeul } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
   import { selectionDe } from './selection.js'
   import { TEINTES, GRIS_FICHIERS, GRIS_RESTE } from './treemap.js'
@@ -92,7 +92,9 @@
         : p.e.nom
 
   function choisir(p) {
-    if (p.e) selection = selectionDe(p.e, 'anneau')
+    if (!p.e) return
+    selection = selectionDe(p.e, 'anneau')
+    choisirSeul(p.e)
   }
 
   function remonter() {

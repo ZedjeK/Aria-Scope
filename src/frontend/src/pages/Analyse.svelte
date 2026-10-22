@@ -7,6 +7,7 @@
   import Types from '../lib/Types.svelte'
   import Ages from '../lib/Ages.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
+  import BarreSelection from '../lib/BarreSelection.svelte'
   import { resume, actifs } from '../lib/filtres.js'
   import { app, relancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
@@ -147,6 +148,7 @@
           {/if}
         </div>
       {/key}
+      <BarreSelection {gen} mode={app.mode} />
     {/if}
   {/if}
 </section>

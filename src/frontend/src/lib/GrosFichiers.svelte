@@ -2,9 +2,9 @@
   // Les 1 000 plus gros fichiers de l'analyse, relevés pendant le scan.
   // Clic : sélectionner (la carte et l'arbre suivent) ; double-clic : l'Explorateur.
   import Icon from './Icon.svelte'
-  import { call, message, montrer } from './state.svelte.js'
+  import { call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
   import { octets, nombre, dateCourte, dateLongue } from './format.js'
-  import { selectionDe, estLigneChoisie } from './selection.js'
+  import { estLigneChoisie } from './selection.js'
 
   let { gen, mode, selection = $bindable(null) } = $props()
 
@@ -67,16 +67,16 @@
     </div>
 
     {#each lignes as f, i (`${f.id}/${f.nom}`)}
-      {@const choisie = estLigneChoisie(selection, f)}
+      {@const choisie = estMarque(f) || estLigneChoisie(selection, f)}
       <div
         class="ligne"
         class:choisie
         role="row"
         tabindex="0"
         aria-selected={choisie}
-        onclick={() => (selection = selectionDe(f, 'liste'))}
+        onclick={(evt) => cliquerElement(f, 'liste', evt, lignes)}
         ondblclick={() => montrer(gen, f.id, f.nom)}
-        onkeydown={(e) => e.key === 'Enter' && (selection = selectionDe(f, 'liste'))}
+        onkeydown={(evt) => evt.key === 'Enter' && cliquerElement(f, 'liste', evt, lignes)}
       >
         <span class="num c-rang" role="gridcell">{i + 1}</span>
         <span class="c-nom" role="gridcell" title={f.nom}><Icon name="file" size={15} /><span class="nom">{f.nom}</span></span>
@@ -121,6 +121,9 @@
   }
   .ligne:hover:not(.entete) {
     background: var(--hover);
+  }
+  .ligne {
+    user-select: none;
   }
   .ligne:focus-visible {
     outline: 2px solid var(--accent);
