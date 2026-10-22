@@ -1,6 +1,7 @@
 package volumes
 
 import (
+	"path/filepath"
 	"runtime"
 	"testing"
 )
@@ -28,6 +29,14 @@ func TestLocaux(t *testing.T) {
 	}
 	if len(Locaux()) == 0 {
 		t.Error("aucun disque local")
+	}
+}
+
+func TestDe(t *testing.T) {
+	vs := Lister()
+	v, ok := De(filepath.Join(vs[0].Chemin, "un", "chemin"))
+	if !ok || v.Chemin != vs[0].Chemin {
+		t.Errorf("volume de %s : %+v, %v", vs[0].Chemin, v, ok)
 	}
 }
 

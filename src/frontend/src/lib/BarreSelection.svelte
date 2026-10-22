@@ -3,6 +3,7 @@
   // Le récapitulatif vient du moteur, qui écarte les doublons (un fichier
   // contenu dans un dossier déjà sélectionné ne compte qu'une fois).
   import Icon from './Icon.svelte'
+  import ConfirmerCorbeille from './ConfirmerCorbeille.svelte'
   import { app, call, message, toutDeselectionner } from './state.svelte.js'
   import { octets, nombre } from './format.js'
 
@@ -10,6 +11,7 @@
 
   let resume = $state(null)
   let erreur = $state('')
+  let confirmer = $state(false)
 
   $effect(() => {
     const g = gen
@@ -29,7 +31,12 @@
   })
 
   function clavier(evt) {
+    if (confirmer) return // la fenêtre de confirmation gère Échap
     if (evt.key === 'Escape' && app.marques.length > 0 && !evt.defaultPrevented) toutDeselectionner()
+    if (evt.key === 'Delete' && app.marques.length > 0 && !evt.target?.closest?.('input, textarea, select')) {
+      evt.preventDefault()
+      confirmer = true
+    }
   }
 </script>
 
@@ -57,7 +64,14 @@
     </div>
     <span class="aide">Ctrl+clic : ajouter · Maj+clic : étendre</span>
     <button class="btn-ghost small" onclick={toutDeselectionner} title="Échap">Tout désélectionner</button>
+    <button class="corbeille small" onclick={() => (confirmer = true)} title="Suppr">
+      <Icon name="trash" size={15} /> Corbeille…
+    </button>
   </div>
+{/if}
+
+{#if confirmer}
+  <ConfirmerCorbeille {gen} {mode} onfermer={() => (confirmer = false)} />
 {/if}
 
 <style>
@@ -119,6 +133,24 @@
     flex: none;
     font-size: 11px;
     color: var(--dim);
+  }
+  .corbeille {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    border: 1px solid color-mix(in srgb, var(--danger) 70%, transparent);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--danger);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .corbeille:hover {
+    background: color-mix(in srgb, var(--danger) 22%, transparent);
   }
   @media (max-width: 1100px) {
     .aide {

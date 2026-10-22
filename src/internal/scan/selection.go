@@ -35,6 +35,8 @@ func cleCible(c Cible) string {
 
 // Resumer calcule le récapitulatif d'une sélection.
 func (s *Scan) Resumer(cibles []Cible) (Resume, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	r := Resume{Filtre: s.filtre.actif}
 	if _, err := s.noeud(0); err != nil {
 		return r, err

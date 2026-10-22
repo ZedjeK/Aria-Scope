@@ -3,7 +3,7 @@
   // gros éléments, le reste regroupé. Cliquer sur une part la sélectionne (et
   // l'anneau plonge dedans si c'est un dossier).
   import Icon from './Icon.svelte'
-  import { call, message, choisirSeul } from './state.svelte.js'
+  import { app, call, message, choisirSeul } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
   import { selectionDe } from './selection.js'
   import { TEINTES, GRIS_FICHIERS, GRIS_RESTE } from './treemap.js'
@@ -25,6 +25,7 @@
     const g = gen
     const id = dossierId
     const m = mode
+    app.revision
     erreur = ''
     Promise.all([call('Enfants', g, id, m, { colonne: '', inverse: false }), call('Fil', g, id)])
       .then(([e, f]) => {

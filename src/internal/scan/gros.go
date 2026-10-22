@@ -70,6 +70,8 @@ type GrosFichier struct {
 // GrosFichiers renvoie les plus gros fichiers de l'analyse, triés selon t.
 // L'ID de chaque ligne est celui de son dossier, comme pour les fichiers de l'arbre.
 func (s *Scan) GrosFichiers(mode string, t Tri) ([]GrosFichier, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	if _, err := s.noeud(0); err != nil {
 		return nil, err
 	}
@@ -86,7 +88,7 @@ func (s *Scan) GrosFichiers(mode string, t Tri) ([]GrosFichier, error) {
 	for i, l := range lignes {
 		c, ok := chemins[l.ID]
 		if !ok {
-			c, _ = s.Chemin(l.ID)
+			c, _ = s.chemin(l.ID)
 			chemins[l.ID] = c
 		}
 		out[i] = GrosFichier{Entree: l, Dossier: c}

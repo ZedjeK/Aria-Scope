@@ -2,7 +2,7 @@
   // Les 1 000 plus gros fichiers de l'analyse, relevés pendant le scan.
   // Clic : sélectionner (la carte et l'arbre suivent) ; double-clic : l'Explorateur.
   import Icon from './Icon.svelte'
-  import { call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
+  import { app, call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
   import { octets, nombre, dateCourte, dateLongue } from './format.js'
   import { estLigneChoisie } from './selection.js'
 
@@ -16,6 +16,7 @@
     const g = gen
     const m = mode
     const t = { colonne: tri.colonne, inverse: tri.inverse }
+    app.revision
     erreur = ''
     call('GrosFichiers', g, m, t)
       .then((l) => {

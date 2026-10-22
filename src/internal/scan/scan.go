@@ -44,6 +44,7 @@ type Dossier struct {
 	fDisque   int64
 	fModif    int64 // fichier le plus récemment modifié de ce dossier
 	illisible bool  // ce dossier n'a pas pu être lu (accès refusé…)
+	retire    bool  // envoyé à la corbeille ou déplacé pendant le ménage
 	nLiens    int64
 
 	// Totaux du sous-arbre, calculés par finaliser
@@ -96,7 +97,11 @@ type Scan struct {
 	duree   time.Duration
 	noeuds  []*Dossier // index = id, rempli à la fin
 	racineD *Dossier
-	pc      bool // plusieurs disques sous une racine virtuelle
+	// arbre protège les nœuds une fois le scan terminé : lectures de
+	// l'interface d'un côté, mises à jour après un ménage de l'autre.
+	arbre           sync.RWMutex
+	fichiersRetires map[string]bool // fichiers déjà retranchés (protégé par arbre)
+	pc              bool            // plusieurs disques sous une racine virtuelle
 }
 
 // ErrPasUnDossier : la cible du scan n'est pas un dossier.
@@ -394,8 +399,17 @@ func (s *Scan) noeud(id int32) (*Dossier, error) {
 	if id < 0 || int(id) >= len(s.noeuds) {
 		return nil, fmt.Errorf("dossier %d inconnu", id)
 	}
-	return s.noeuds[id], nil
+	d := s.noeuds[id]
+	for a := d; a != nil; a = a.parent {
+		if a.retire {
+			return nil, ErrRetire
+		}
+	}
+	return d, nil
 }
+
+// ErrRetire : l'élément a été envoyé à la corbeille (ou déplacé) depuis l'analyse.
+var ErrRetire = errors.New("cet élément n'est plus là : il a été retiré pendant le ménage")
 
 func entreeDossier(d *Dossier) Entree {
 	return Entree{
@@ -409,6 +423,8 @@ func entreeDossier(d *Dossier) Entree {
 
 // RacineEntree renvoie la ligne du dossier scanné.
 func (s *Scan) RacineEntree() (Entree, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	d, err := s.noeud(0)
 	if err != nil {
 		return Entree{}, err
@@ -436,6 +452,8 @@ func limiter(lignes []Entree, limite int, parent int32) []Entree {
 // Enfants renvoie les sous-dossiers de id, plus une ligne « fichiers » pour
 // les fichiers posés directement dedans, triés selon t.
 func (s *Scan) Enfants(id int32, mode string, t Tri, limite int) ([]Entree, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	d, err := s.noeud(id)
 	if err != nil {
 		return nil, err
@@ -458,10 +476,12 @@ func (s *Scan) Enfants(id int32, mode string, t Tri, limite int) ([]Entree, erro
 // Fichiers relit le dossier id sur le disque et renvoie ses fichiers.
 // La liste reflète donc le disque au moment du clic, pas au moment du scan.
 func (s *Scan) Fichiers(id int32, mode string, t Tri, limite int) ([]Entree, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	if _, err := s.noeud(id); err != nil {
 		return nil, err
 	}
-	chemin, err := s.Chemin(id)
+	chemin, err := s.chemin(id)
 	if err != nil {
 		return nil, err
 	}
@@ -481,6 +501,13 @@ func (s *Scan) Fichiers(id int32, mode string, t Tri, limite int) ([]Entree, err
 
 // Chemin reconstruit le chemin complet du dossier id.
 func (s *Scan) Chemin(id int32) (string, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
+	return s.chemin(id)
+}
+
+// chemin : comme Chemin, verrou déjà pris par l'appelant.
+func (s *Scan) chemin(id int32) (string, error) {
 	d, err := s.noeud(id)
 	if err != nil {
 		return "", err

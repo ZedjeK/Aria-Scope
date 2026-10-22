@@ -40,6 +40,12 @@
     <path d="M12 19V5" /><path d="M6 11l6-6 6 6" />
   {:else if name === 'filter'}
     <path d="M4 5h16l-6 7.5V19l-4 2v-8.5z" />
+  {:else if name === 'trash'}
+    <path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11v6" /><path d="M14 11v6" />
+  {:else if name === 'shield'}
+    <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
+  {:else if name === 'check'}
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
   {:else if name === 'warn'}
     <path d="M12 3l10 18H2z" /><path d="M12 10v5" /><path d="M12 18h.01" />
   {/if}

@@ -4,7 +4,7 @@
   import { untrack } from 'svelte'
   import Icon from './Icon.svelte'
   import { selectionDe, estBlocChoisi } from './selection.js'
-  import { call, message, montrer, choisirSeul } from './state.svelte.js'
+  import { app, call, message, montrer, choisirSeul } from './state.svelte.js'
   import { octets, nombre, pourcentTexte, pourcent } from './format.js'
   import { disposer } from './treemap.js'
 
@@ -30,6 +30,7 @@
     const g = gen
     const id = racineId
     const m = mode
+    app.revision // après un ménage, la carte se redessine
     chargement = true
     erreur = ''
     Promise.all([call('Carte', g, id, m), call('Fil', g, id)])
@@ -38,7 +39,10 @@
         donnees = c
         fil = f ?? []
       })
-      .catch((err) => (erreur = message(err)))
+      .catch((err) => {
+        if (id !== 0) racineId = 0 // le dossier affiché a été retiré : retour à la racine
+        else erreur = message(err)
+      })
       .finally(() => (chargement = false))
   })
 

@@ -23,6 +23,8 @@ export const app = $state({
   selection: null, // partagée entre l'arbre et la carte (voir selection.js)
   marques: [], // sélection multiple : cibles des actions de ménage
   ancre: null, // point de départ d'une sélection Maj+clic
+  revision: 0, // augmente à chaque ménage : les vues se rechargent
+  bilan: null, // résultat de la dernière opération de ménage
   erreur: '',
   loadError: '',
 })
@@ -73,6 +75,7 @@ export async function lancer(chemin) {
   let ok = true
   try {
     await call('Lancer', chemin, $state.snapshot(app.filtres))
+    app.bilan = null
     app.selection = null
     app.marques = []
     app.page = 'analyse'
@@ -90,6 +93,7 @@ export async function lancerPC() {
   let ok = true
   try {
     await call('LancerPC', $state.snapshot(app.filtres))
+    app.bilan = null
     app.selection = null
     app.marques = []
     app.page = 'analyse'
@@ -165,6 +169,17 @@ export const estMarque = (e) => marquable(e) && app.marques.some((m) => cleMarqu
 export function toutDeselectionner() {
   app.marques = []
   app.ancre = null
+}
+
+// Après une opération de ménage : l'analyse a été mise à jour par le moteur,
+// les vues se rechargent et le bilan s'affiche.
+export async function apresMenage(bilan, operation) {
+  app.bilan = { ...bilan, restants: bilan.restants ?? [], operation, quand: Date.now() }
+  app.marques = []
+  app.ancre = null
+  app.selection = null
+  app.revision++
+  await refresh()
 }
 
 // Relance l'analyse affichée, qu'il s'agisse d'un dossier ou de tout le PC.

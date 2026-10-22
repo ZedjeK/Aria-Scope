@@ -4,7 +4,7 @@
   import { tick, untrack } from 'svelte'
   import Icon from './Icon.svelte'
   import { estLigneChoisie } from './selection.js'
-  import { call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
+  import { app, call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, dateCourte, dateLongue } from './format.js'
 
   let { gen, mode, pc = false, tri = $bindable({ colonne: '', inverse: false }), selection = $bindable(null) } = $props()
@@ -122,6 +122,22 @@
       ordreAffiche = ordre
       if (racine) recharger(racine)
     }
+  })
+
+  // Après un ménage : la racine et tout ce qui est déplié se rechargent,
+  // les éléments partis disparaissent, le reste garde son état.
+  let revisionVue = untrack(() => app.revision)
+  $effect(() => {
+    const r = app.revision
+    if (r === revisionVue) return
+    revisionVue = r
+    untrack(async () => {
+      if (!racine) return
+      try {
+        racine.e = await call('Racine', gen)
+      } catch {}
+      await recharger(racine)
+    })
   })
 
   // ---------- Tri par colonne ----------

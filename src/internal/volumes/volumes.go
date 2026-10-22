@@ -28,6 +28,22 @@ func Locaux() []Volume {
 	return out
 }
 
+// De renvoie le volume qui contient chemin (le plus long point de montage
+// correspondant), pour savoir par exemple s'il est amovible.
+func De(chemin string) (Volume, bool) {
+	p := normaliser(chemin)
+	var trouve Volume
+	long := -1
+	for _, v := range Lister() {
+		r := normaliser(v.Chemin)
+		sep := string(filepath.Separator)
+		if (p == r || strings.HasPrefix(p, strings.TrimSuffix(r, sep)+sep)) && len(r) > long {
+			trouve, long = v, len(r)
+		}
+	}
+	return trouve, long >= 0
+}
+
 // Utilise renvoie l'espace occupé du volume dont racine est la racine, ou 0
 // si racine n'est pas une racine de volume. Sert à estimer l'avancement d'un
 // scan de disque entier.

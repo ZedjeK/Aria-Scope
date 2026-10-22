@@ -130,6 +130,8 @@ func repartir(exts map[string]compteur, mode string) []Famille {
 // Pour la racine, ce sont les chiffres relevés pendant le scan ; pour une
 // branche, on relit ses dossiers à la demande.
 func (s *Scan) Types(id int32, mode string) ([]Famille, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	var out []Famille
 	err := s.statsDe(id, func(st *stats) { out = repartir(st.exts, mode) })
 	return out, err

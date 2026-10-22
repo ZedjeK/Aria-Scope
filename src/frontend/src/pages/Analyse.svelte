@@ -8,6 +8,7 @@
   import Ages from '../lib/Ages.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
   import BarreSelection from '../lib/BarreSelection.svelte'
+  import BilanMenage from '../lib/BilanMenage.svelte'
   import { resume, actifs } from '../lib/filtres.js'
   import { app, relancer, arreter, choisirEtLancer, scanEnCours } from '../lib/state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte, duree, parSeconde } from '../lib/format.js'
@@ -58,6 +59,8 @@
       </div>
     </div>
     <p class="path racine-chemin">{scan.racine}</p>
+
+    <BilanMenage mode={app.mode} />
 
     {#if app.panneauFiltres && !enCours}
       <PanneauFiltres racine={scan.racine} onfermer={() => (app.panneauFiltres = false)} />

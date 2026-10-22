@@ -23,6 +23,8 @@ const (
 
 // Carte renvoie les blocs de la treemap du dossier id.
 func (s *Scan) Carte(id int32, mode string) (Bloc, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	d, err := s.noeud(id)
 	if err != nil {
 		return Bloc{}, err
@@ -103,6 +105,8 @@ type Etape struct {
 
 // Fil renvoie les dossiers de la racine jusqu'à id inclus.
 func (s *Scan) Fil(id int32) ([]Etape, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	d, err := s.noeud(id)
 	if err != nil {
 		return nil, err

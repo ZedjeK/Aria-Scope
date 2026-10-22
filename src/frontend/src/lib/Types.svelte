@@ -3,7 +3,7 @@
   // en extensions. Pour toute l'analyse, ou pour le dossier sélectionné.
   import Icon from './Icon.svelte'
   import Portee from './Portee.svelte'
-  import { call, message } from './state.svelte.js'
+  import { app, call, message } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
 
   let { gen, mode, selection, portee = $bindable('tout') } = $props()
@@ -37,6 +37,7 @@
     const g = gen
     const i = id
     const m = mode
+    app.revision
     chargement = true
     erreur = ''
     call('Types', g, i, m)

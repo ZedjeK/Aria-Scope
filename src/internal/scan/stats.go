@@ -124,7 +124,7 @@ func (s *Scan) statsDe(id int32, f func(st *stats)) error {
 	s.cacheMu.Lock()
 	defer s.cacheMu.Unlock()
 	if s.cache == nil || s.cacheID != id {
-		chemin, err := s.Chemin(id)
+		chemin, err := s.chemin(id)
 		if err != nil {
 			return err
 		}
@@ -186,6 +186,8 @@ type Age struct {
 // Ages renvoie la répartition par âge du dossier id, de la plus récente à la
 // plus ancienne tranche, puis les fichiers sans date.
 func (s *Scan) Ages(id int32) ([]Age, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
 	var out []Age
 	err := s.statsDe(id, func(st *stats) {
 		for i, c := range st.ages {

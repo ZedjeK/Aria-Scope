@@ -2,7 +2,7 @@
   // Répartition par âge : les fichiers rangés selon leur date de dernière
   // modification, du plus récent au plus ancien.
   import Portee from './Portee.svelte'
-  import { call, message } from './state.svelte.js'
+  import { app, call, message } from './state.svelte.js'
   import { octets, nombre, pourcent, pourcentTexte } from './format.js'
 
   let { gen, mode, selection, portee = $bindable('tout') } = $props()
@@ -19,6 +19,7 @@
   $effect(() => {
     const g = gen
     const i = id
+    app.revision
     chargement = true
     erreur = ''
     call('Ages', g, i)
