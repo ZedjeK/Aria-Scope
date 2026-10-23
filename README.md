@@ -6,12 +6,13 @@
 
 <p align="center">
   L'œil qui fouille ton disque : Aria Scope te montre, dossier par dossier,<br>
-  qui prend toute la place. Scan parallèle, arborescence triée, un seul exe Windows.<br>
+  qui prend toute la place, puis t'aide à faire le ménage sans rien risquer.<br>
+  Scan parallèle, arborescence triée, un seul exe Windows.<br>
   Rien à installer, aucun droit administrateur nécessaire.
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.4 · Windows 10/11 x64 · licence MIT
+  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.5 · Windows 10/11 x64 · licence MIT
 </p>
 
 ## Ce qu'il fait
@@ -31,6 +32,12 @@
 | **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
 | **Fichiers à la demande** | Les fichiers d'un dossier sont relus au moment où tu les déplies : la liste reflète le disque, et la mémoire reste légère même sur un disque entier |
 | **Explorateur** | Un clic sur ↗ ouvre le dossier, ou sélectionne le fichier, dans l'Explorateur Windows |
+| **Sélection multiple** | Ctrl+clic pour ajouter, Maj+clic pour étendre, dans l'arbre comme dans les plus gros fichiers. La barre de sélection donne le total, sans compter deux fois un fichier déjà compris dans un dossier sélectionné |
+| **Corbeille** | Touche Suppr ou bouton : un aperçu de ce qui part et de l'espace libéré, puis la corbeille de Windows. Jamais de suppression définitive ; sur une clé USB sans corbeille, Aria te prévient deux fois |
+| **Déplacer et copier** | Vers le dossier de ton choix, par l'Explorateur de Windows. L'aperçu vérifie la place disponible et signale les noms déjà pris |
+| **Archiver en .zip** | Un .zip standard, relu en entier avant d'être validé, avec une barre de progression et un bouton pour l'arrêter sans rien laisser derrière. En option, les originaux partent ensuite à la corbeille, seulement s'ils sont entièrement dans l'archive et n'ont pas bougé |
+| **Garde-fous** | Windows, Program Files, ProgramData, ton profil et ses dossiers AppData, les fichiers système à la racine : écartés d'office, avec la raison. L'analyse se met à jour toute seule après chaque opération, sans rescan |
+| **Journal et annulation** | Chaque opération est notée dans le journal. Un déplacement se remet en place, une copie part à la corbeille, les originaux d'une archive se restaurent depuis le .zip, même des semaines plus tard. Rien n'est jamais écrasé |
 
 ## Installation
 
@@ -41,7 +48,8 @@
 
 - **Dossiers illisibles** : sans droits administrateur, certains dossiers système sont refusés. Aria les compte et les signale d'un ⚠ dans l'arborescence. Lancé en administrateur (clic droit → « Exécuter en tant qu'administrateur »), il en lira la plupart.
 - **Liens et jonctions** : ils ne sont pas suivis, pour ne rien compter deux fois. Windows en sème un peu partout (« Application Data », « Mes documents »…), ils apparaissent dans le compteur « liens ignorés ».
-- **Réglages** : ils sont gardés dans `%APPDATA%\AriaScope\reglages.json`. L'exe, lui, reste portable.
+- **Réglages et journal** : ils sont gardés dans `%APPDATA%\AriaScope` (`reglages.json`, `journal.json`, les 500 dernières opérations). L'exe, lui, reste portable.
+- **Annuler un envoi à la corbeille** : il se restaure depuis la corbeille de Windows (clic droit, « Restaurer ») ; le journal a un bouton pour l'ouvrir.
 - **Gros dossiers** : au-delà de 300 éléments, les plus légers sont regroupés sur une ligne « N autres éléments », pour que l'interface reste fluide même dans `WinSxS`.
 
 ## Compiler soi-même
@@ -56,10 +64,9 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 ## Feuille de route
 
-- **Ménage** : corbeille, déplacer, copier, archiver, renommage en masse, menu contextuel, annulation
 - **Recherche** : recherche multicritère, chemins trop longs, doublons vérifiés par SHA-256
 - **Export et historique** : CSV, HTML, Excel, PDF, SQLite ; analyses sauvegardées et comparées
-- **Plus tard** : détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
+- **Plus tard** : renommage en masse, menu contextuel, détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
 
 ## Licence
 

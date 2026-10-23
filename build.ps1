@@ -2,11 +2,11 @@
 # Normalement lancé par la CI (.github/workflows/build.yml), mais marche aussi
 # sur ton PC.
 #
-# Usage : powershell -ExecutionPolicy Bypass -File .\build.ps1 [-Version 0.4.0]
+# Usage : powershell -ExecutionPolicy Bypass -File .\build.ps1 [-Version 0.5.0]
 # Prérequis : Go 1.26 ou plus, Node.js LTS.
 
 param(
-    [string] $Version = '0.4.0'
+    [string] $Version = '0.5.0'
 )
 
 $ErrorActionPreference = 'Stop'
