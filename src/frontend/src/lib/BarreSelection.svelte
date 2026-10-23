@@ -34,7 +34,8 @@
   async function transferer(operation) {
     erreur = ''
     try {
-      const destination = await call('ChoisirDestination', operation === 'copier' ? 'Copier vers…' : 'Déplacer vers…')
+      const titres = { copier: 'Copier vers…', deplacer: 'Déplacer vers…', archiver: "Où ranger l'archive ?" }
+      const destination = await call('ChoisirDestination', titres[operation])
       if (destination) confirmer = { operation, destination }
     } catch (err) {
       erreur = message(err)
@@ -81,6 +82,9 @@
     <button class="action small" onclick={() => transferer('copier')} title="Copier vers un autre dossier">
       <Icon name="copy" size={15} /> Copier…
     </button>
+    <button class="action small" onclick={() => transferer('archiver')} title="Regrouper dans une archive .zip">
+      <Icon name="archive" size={15} /> Archiver…
+    </button>
     <button class="corbeille small" onclick={() => (confirmer = { operation: 'corbeille', destination: '' })} title="Suppr">
       <Icon name="trash" size={15} /> Corbeille…
     </button>
@@ -123,7 +127,7 @@
   }
   .texte {
     flex: 1;
-    min-width: 0;
+    min-width: 220px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -188,7 +192,10 @@
   .corbeille:hover {
     background: color-mix(in srgb, var(--danger) 22%, transparent);
   }
-  @media (max-width: 1100px) {
+  .barre > button {
+    flex: none;
+  }
+  @media (max-width: 1700px) {
     .aide {
       display: none;
     }

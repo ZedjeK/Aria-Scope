@@ -1,8 +1,9 @@
 <script>
   // Confirmation avant une opération de ménage (corbeille, déplacement,
-  // copie) : ce qui est concerné, ce qui est écarté et pourquoi, la place à
-  // l'arrivée, et les cas où Windows n'a pas de corbeille.
-  import { onMount } from 'svelte'
+  // copie, archive) : ce qui est concerné, ce qui est écarté et pourquoi, la
+  // place à l'arrivée, et les cas où Windows n'a pas de corbeille. L'archive
+  // se suit ensuite ici même, jusqu'à la vérification.
+  import { onMount, onDestroy } from 'svelte'
   import Icon from './Icon.svelte'
   import { app, call, message, apresMenage } from './state.svelte.js'
   import { octets, nombre } from './format.js'
@@ -13,9 +14,15 @@
     corbeille: { titre: 'Envoyer à la corbeille ?', icone: 'trash', verbe: 'Envoyer', suite: 'à la corbeille', encours: 'Envoi en cours…' },
     deplacer: { titre: 'Déplacer ?', icone: 'move', verbe: 'Déplacer', suite: '', encours: 'Déplacement en cours…' },
     copier: { titre: 'Copier ?', icone: 'copy', verbe: 'Copier', suite: '', encours: 'Copie en cours…' },
+    archiver: { titre: 'Archiver en .zip ?', icone: 'archive', verbe: 'Archiver', suite: '', encours: 'Archivage en cours…' },
+  }
+  const PHASES = {
+    ecriture: 'Écriture de l\'archive',
+    verification: 'Vérification : relecture complète',
+    corbeille: 'Envoi des originaux à la corbeille',
   }
   const t = $derived(TEXTES[operation] ?? TEXTES.corbeille)
-  const danger = $derived(operation === 'corbeille')
+  const archive = $derived(operation === 'archiver')
 
   let apercu = $state(null)
   let erreur = $state('')
@@ -23,40 +30,87 @@
   let enCours = $state(false)
   let annuler
 
+  // Archive
+  let nom = $state('') // tel que tapé
+  let erreurNom = $state('')
+  let recycler = $state(false) // originaux à la corbeille après vérification
+  let suivi = $state(null)
+  let chargement = 0
+  let minuterie
+  let sondage
+
+  const danger = $derived(operation === 'corbeille' || (archive && recycler))
   const cibles = $state.snapshot(app.marques)
   const val = (x) => (mode === 'disque' ? x.disque : x.taille)
   const pluriel = (n, mot) => `${nombre(n)} ${mot}${n > 1 ? 's' : ''}`
+  const avecZip = (n) => (n.trim().toLowerCase().endsWith('.zip') ? n.trim() : n.trim() + '.zip')
+
+  function recevoir(a) {
+    apercu = {
+      ...a,
+      elements: a.elements ?? [],
+      ecartes: a.ecartes ?? [],
+      conflits: a.conflits ?? [],
+      amovibles: a.amovibles ?? [],
+      gardes: a.gardes ?? [],
+    }
+  }
 
   onMount(() => {
     annuler?.focus() // le bouton sûr a le focus
-    call('Apercu', gen, operation, cibles, destination)
-      .then(
-        (a) =>
-          (apercu = {
-            ...a,
-            elements: a.elements ?? [],
-            ecartes: a.ecartes ?? [],
-            conflits: a.conflits ?? [],
-            amovibles: a.amovibles ?? [],
-          }),
-      )
+    const demande = archive ? call('ApercuArchive', gen, cibles, destination, '') : call('Apercu', gen, operation, cibles, destination)
+    demande
+      .then((a) => {
+        recevoir(a)
+        if (archive) nom = a.archive
+      })
       .catch((err) => (erreur = message(err)))
   })
 
+  onDestroy(() => {
+    clearTimeout(minuterie)
+    clearInterval(sondage)
+  })
+
+  // Le nom change : on revérifie (nom permis, déjà pris ?) après une courte pause.
+  function nomChange() {
+    clearTimeout(minuterie)
+    const n = ++chargement
+    minuterie = setTimeout(() => {
+      call('ApercuArchive', gen, cibles, destination, nom)
+        .then((a) => {
+          if (n !== chargement) return
+          recevoir(a)
+          erreurNom = ''
+        })
+        .catch((err) => n === chargement && (erreurNom = message(err)))
+    }, 250)
+  }
+
+  const nomPris = $derived(archive && apercu && !erreurNom && nom.trim() !== '' && apercu.archive.toLowerCase() !== avecZip(nom).toLowerCase())
+  const amovibles = $derived(apercu && (!archive || recycler) ? apercu.amovibles : [])
+
   const possible = $derived(
-    apercu && apercu.nombre > 0 && apercu.manque <= 0 && (apercu.amovibles.length === 0 || compris) && !enCours,
+    apercu &&
+      apercu.nombre > 0 &&
+      apercu.manque <= 0 &&
+      !(archive && (erreurNom || nom.trim() === '')) &&
+      (amovibles.length === 0 || compris) &&
+      !enCours,
   )
 
   const libelleBouton = $derived.by(() => {
     if (enCours) return t.encours
     const n = apercu?.nombre ?? 0
     const quoi = n > 1 ? `les ${nombre(n)} éléments` : "l'élément"
+    if (archive && recycler) return `Archiver puis recycler ${quoi}`
     return `${t.verbe} ${quoi}${t.suite ? ' ' + t.suite : ''}`
   })
 
   async function executer() {
     enCours = true
     erreur = ''
+    if (archive) return archiver()
     try {
       const bilan = await call('Executer', gen, operation, cibles, destination)
       await apresMenage(bilan, operation)
@@ -67,6 +121,34 @@
       enCours = false
     }
   }
+
+  async function archiver() {
+    try {
+      await call('Archiver', gen, cibles, destination, { nom, corbeille: recycler })
+    } catch (err) {
+      erreur = message(err)
+      enCours = false
+      return
+    }
+    sondage = setInterval(async () => {
+      try {
+        const s = await call('SuiviArchive')
+        suivi = s
+        if (s.phase === 'fini' && s.bilan) {
+          clearInterval(sondage)
+          await apresMenage(s.bilan, 'archiver')
+          enCours = false
+          onfermer?.()
+        }
+      } catch (err) {
+        erreur = message(err)
+      }
+    }, 200)
+  }
+
+  const arreter = () => call('AnnulerArchive').catch((err) => (erreur = message(err)))
+  const arretable = $derived(suivi && (suivi.phase === 'ecriture' || suivi.phase === 'verification'))
+  const avancement = $derived(suivi && suivi.octets > 0 ? Math.min(1, suivi.octetsFaits / suivi.octets) : 0)
 
   function clavier(evt) {
     if (evt.key === 'Escape' && !enCours) {
@@ -87,16 +169,46 @@
 
     {#if destination}
       <p class="vers">
-        <span class="eyebrow">vers</span>
+        <span class="eyebrow">{archive ? 'dans' : 'vers'}</span>
         <span class="chemin-dest" title={destination}><Icon name="folder" size={14} /> <bdi>{destination}</bdi></span>
       </p>
+    {/if}
+
+    {#if archive && apercu}
+      <label class="champ">
+        <span class="eyebrow">nom de l'archive</span>
+        <input type="text" bind:value={nom} oninput={nomChange} disabled={enCours} spellcheck="false" aria-invalid={!!erreurNom} />
+        {#if erreurNom}
+          <span class="error">{erreurNom}</span>
+        {:else if nomPris}
+          <span class="hint">Ce nom est déjà pris : l'archive s'appellera <strong>{apercu.archive}</strong>. Rien n'est jamais écrasé.</span>
+        {/if}
+      </label>
     {/if}
 
     {#if erreur}
       <p class="error">{erreur}</p>
     {/if}
 
-    {#if !apercu && !erreur}
+    {#if suivi && enCours}
+      <div class="suivi" aria-live="polite">
+        <div class="suivi-tete">
+          <strong>{PHASES[suivi.phase] ?? 'Finalisation…'}</strong>
+          {#if suivi.phase !== 'corbeille'}<span>{Math.floor(avancement * 100)} %</span>{/if}
+        </div>
+        {#if suivi.phase !== 'corbeille'}
+          <div class="jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.floor(avancement * 100)}>
+            <span style="width: {avancement * 100}%"></span>
+          </div>
+          <p class="hint">
+            {octets(suivi.octetsFaits)} sur {octets(suivi.octets)} · {nombre(suivi.fichiersFaits)} / {pluriel(suivi.fichiers, 'fichier')}
+          </p>
+        {:else}
+          <p class="hint">Windows peut afficher sa propre fenêtre de progression.</p>
+        {/if}
+        {#if suivi.courant}<p class="courant" title={suivi.courant}><bdi>{suivi.courant}</bdi></p>{/if}
+      </div>
+    {:else if !apercu && !erreur}
       <p class="hint">Préparation…</p>
     {:else if apercu}
       {#if apercu.nombre > 0}
@@ -118,21 +230,42 @@
         </ul>
         {#if operation === 'corbeille' && apercu.amovibles.length === 0}
           <p class="hint">Tout reste restaurable depuis la corbeille de Windows.</p>
+        {:else if archive}
+          <p class="hint">Format .zip standard, que l'Explorateur ouvre sans rien installer. L'archive est relue en entier avant d'être validée ; tu peux l'arrêter en route sans rien laisser derrière.</p>
         {:else if operation !== 'corbeille'}
           <p class="hint">Windows affiche sa progression et peut annuler l'opération depuis l'Explorateur (Ctrl+Z).</p>
         {/if}
       {:else}
-        <p class="resume">Rien dans cette sélection ne peut être {operation === 'copier' ? 'copié' : operation === 'deplacer' ? 'déplacé' : 'envoyé à la corbeille'}.</p>
+        <p class="resume">Rien dans cette sélection ne peut être {archive ? 'archivé' : operation === 'copier' ? 'copié' : operation === 'deplacer' ? 'déplacé' : 'envoyé à la corbeille'}.</p>
       {/if}
 
       {#if apercu.besoin > 0 && apercu.libre >= 0}
         {#if apercu.manque > 0}
           <div class="encart danger">
             <strong><Icon name="warn" size={14} /> Pas assez de place à l'arrivée</strong>
-            <p>Il faut {octets(apercu.besoin)}, il reste {octets(apercu.libre)} : il manque <strong>{octets(apercu.manque)}</strong>.</p>
+            <p>Il faut {archive ? "jusqu'à " : ''}{octets(apercu.besoin)}, il reste {octets(apercu.libre)} : il manque <strong>{octets(apercu.manque)}</strong>.</p>
           </div>
         {:else}
-          <p class="place"><Icon name="check" size={14} /> {octets(apercu.besoin)} nécessaires · {octets(apercu.libre)} libres à l'arrivée</p>
+          <p class="place"><Icon name="check" size={14} /> {archive ? "jusqu'à " : ''}{octets(apercu.besoin)} nécessaires · {octets(apercu.libre)} libres à l'arrivée</p>
+        {/if}
+      {/if}
+
+      {#if archive && apercu.nombre > 0}
+        <label class="option" class:option-active={recycler}>
+          <input type="checkbox" bind:checked={recycler} disabled={enCours} />
+          <span>
+            <strong>Envoyer les originaux à la corbeille</strong> une fois l'archive vérifiée.
+            <span class="hint">Seulement ce qui est entièrement dans l'archive et n'a pas changé entre-temps.</span>
+          </span>
+        </label>
+        {#if recycler && apercu.gardes.length > 0}
+          <div class="encart protege">
+            <strong><Icon name="shield" size={14} /> {apercu.gardes.length > 1 ? `${nombre(apercu.gardes.length)} éléments archivés mais laissés en place` : '1 élément archivé mais laissé en place'}</strong>
+            <ul>
+              {#each apercu.gardes.slice(0, 5) as g (g.chemin)}<li><bdi>{g.chemin}</bdi> : {g.raison}</li>{/each}
+              {#if apercu.gardes.length > 5}<li>… et {apercu.gardes.length - 5} autres</li>{/if}
+            </ul>
+          </div>
         {/if}
       {/if}
 
@@ -168,17 +301,23 @@
         </div>
       {/if}
 
-      {#if apercu.amovibles.length > 0}
+      {#if amovibles.length > 0}
         <div class="encart danger">
-          <strong><Icon name="warn" size={14} /> Disque amovible : {apercu.amovibles.join(', ')}</strong>
-          <p>Sur une clé ou un disque USB, Windows n'a souvent pas de corbeille : les éléments seraient alors <strong>supprimés définitivement</strong>. Windows te préviendra avant de le faire.</p>
+          <strong><Icon name="warn" size={14} /> Disque amovible : {amovibles.join(', ')}</strong>
+          <p>Sur une clé ou un disque USB, Windows n'a souvent pas de corbeille : les {archive ? 'originaux' : 'éléments'} seraient alors <strong>supprimés définitivement</strong>. Windows te préviendra avant de le faire.</p>
           <label><input type="checkbox" bind:checked={compris} /> J'ai compris, je veux continuer</label>
         </div>
       {/if}
     {/if}
 
     <div class="actions">
-      <button class="btn-ghost" bind:this={annuler} disabled={enCours} onclick={() => onfermer?.()}>Annuler</button>
+      {#if archive && enCours}
+        <button class="btn-ghost" bind:this={annuler} disabled={!arretable} onclick={arreter}>
+          <Icon name="stop" size={16} /> Arrêter
+        </button>
+      {:else}
+        <button class="btn-ghost" bind:this={annuler} disabled={enCours} onclick={() => onfermer?.()}>Annuler</button>
+      {/if}
       <button class={danger ? 'btn-danger' : 'btn-primary'} disabled={!possible} onclick={executer}>
         <Icon name={t.icone} size={16} />
         {libelleBouton}
@@ -188,6 +327,91 @@
 </div>
 
 <style>
+  .champ {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: -4px;
+  }
+  .champ input {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .champ strong {
+    color: var(--text);
+  }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .option strong {
+    color: var(--text);
+  }
+  .option .hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+  }
+  .option input {
+    width: auto;
+    min-height: 0;
+    margin-top: 3px;
+  }
+  .option.option-active {
+    border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+  }
+  .suivi {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--action) 45%, transparent);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    background: var(--surface-sunken);
+  }
+  .suivi-tete {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .jauge {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .jauge span {
+    display: block;
+    height: 100%;
+    background: var(--action);
+    box-shadow: 0 0 10px var(--action);
+    transition: width 0.2s linear;
+  }
+  .suivi .hint {
+    margin: 0;
+  }
+  .courant {
+    margin: 0;
+    font-size: 11px;
+    color: var(--dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
   .voile {
     position: fixed;
     inset: 0;

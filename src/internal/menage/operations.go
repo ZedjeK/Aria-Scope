@@ -20,6 +20,7 @@ const (
 	OpCorbeille = "corbeille"
 	OpDeplacer  = "deplacer"
 	OpCopier    = "copier"
+	OpArchiver  = "archiver"
 )
 
 // Une seule opération de ménage à la fois.
@@ -66,6 +67,11 @@ type Apercu struct {
 	// DansAnalyse : l'arrivée est dans ce que couvre l'analyse ; ce qui y arrive
 	// n'apparaîtra qu'après une nouvelle analyse.
 	DansAnalyse bool `json:"dansAnalyse"`
+	// Archive : nom du .zip qui sera créé (libre à l'arrivée), et éléments
+	// archivés mais qui resteraient en place si l'on envoie les originaux à
+	// la corbeille (protégés).
+	Archive string  `json:"archive"`
+	Gardes  []Refus `json:"gardes"`
 }
 
 // Bilan : le résultat d'une opération.
@@ -79,6 +85,16 @@ type Bilan struct {
 	Annule      bool    `json:"annule"`
 	Erreur      string  `json:"erreur"`
 	Perime      bool    `json:"perime"` // l'analyse ne montre pas encore ce qui est arrivé
+
+	// Archive
+	Archive      string  `json:"archive"`      // chemin du .zip créé
+	Compresse    int64   `json:"compresse"`    // taille du .zip
+	Verifie      bool    `json:"verifie"`      // relu entièrement, sans erreur
+	Sautes       []Refus `json:"sautes"`       // fichiers qui n'ont pas pu être archivés
+	Recycles     int     `json:"recycles"`     // originaux envoyés à la corbeille
+	Libere       int64   `json:"libere"`       // ce qu'ils pesaient
+	LibereDisque int64   `json:"libereDisque"` // idem, sur le disque
+	Gardes       []Refus `json:"gardes"`       // originaux laissés en place, et pourquoi
 }
 
 const maxApercu = 100
@@ -88,6 +104,7 @@ type prepa struct {
 	apercu  Apercu
 	cibles  []scan.Cible
 	chemins []string
+	gardes  map[int]string // archive : index des originaux qui ne seront jamais recyclés
 }
 
 func nomValide(nom string) bool {
@@ -143,7 +160,7 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 	switch op {
 	case OpCorbeille:
 		dest = ""
-	case OpDeplacer, OpCopier:
+	case OpDeplacer, OpCopier, OpArchiver:
 		var err error
 		if dest, err = verifierDestination(dest); err != nil {
 			return p, err
@@ -158,8 +175,9 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 	// Listes jamais nulles : l'interface reçoit [] et non null.
 	a := Apercu{
 		Operation: op, Destination: dest, Filtre: resume.Filtre, Libre: -1,
-		Elements: []ElementApercu{}, Ecartes: []Refus{}, Conflits: []string{}, Amovibles: []string{},
+		Elements: []ElementApercu{}, Ecartes: []Refus{}, Conflits: []string{}, Amovibles: []string{}, Gardes: []Refus{},
 	}
+	p.gardes = map[int]string{}
 	var volDest volumes.Volume
 	if dest != "" {
 		volDest, _ = volumeDe(dest)
@@ -180,9 +198,10 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 		ecarter := func(raison string) { a.Ecartes = append(a.Ecartes, Refus{Chemin: chemin, Raison: raison}) }
 
 		// Ce qui quitte son emplacement (corbeille, déplacement) obéit à toutes
-		// les protections ; une copie ne fait que lire, seule une racine de
-		// disque est refusée.
-		if op == OpCopier {
+		// les protections ; une copie ou une archive ne fait que lire, seule
+		// une racine de disque est refusée.
+		lecture := op == OpCopier || op == OpArchiver
+		if lecture {
 			if filepath.Dir(chemin) == chemin {
 				ecarter("racine d'un disque")
 				continue
@@ -193,10 +212,14 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 		}
 		if dest != "" {
 			if c.Type == "dossier" && dedans(dest, chemin) {
-				ecarter("un dossier ne peut pas aller dans lui-même")
+				if op == OpArchiver {
+					ecarter("l'archive serait rangée dans ce dossier")
+				} else {
+					ecarter("un dossier ne peut pas aller dans lui-même")
+				}
 				continue
 			}
-			if memeChemin(filepath.Dir(chemin), dest) {
+			if op != OpArchiver && memeChemin(filepath.Dir(chemin), dest) {
 				ecarter("déjà dans ce dossier")
 				continue
 			}
@@ -213,10 +236,31 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 		a.Elements = append(a.Elements, ElementApercu{Chemin: chemin, Type: c.Type, Taille: r.Taille, Disque: r.Disque})
 		p.cibles = append(p.cibles, c)
 		p.chemins = append(p.chemins, chemin)
+		if op == OpArchiver {
+			// Archivé quoi qu'il arrive ; recyclé seulement s'il n'est pas protégé.
+			garde := ""
+			if c.Type == "dossier" && c.ID == 0 {
+				garde = "racine de l'analyse"
+			} else if raison := Protections.Raison(chemin); raison != "" {
+				garde = "protégé : " + raison
+			}
+			if garde != "" {
+				p.gardes[len(p.cibles)-1] = garde
+				a.Gardes = append(a.Gardes, Refus{Chemin: chemin, Raison: garde})
+			}
+		}
 
 		vol, trouve := volumeDe(chemin)
 		switch op {
-		case OpCorbeille:
+		case OpCorbeille, OpArchiver:
+			if op == OpArchiver {
+				// L'archive s'écrit en entier avant d'être réduite : on compte
+				// le pire cas, plus les en-têtes du zip.
+				a.Besoin += r.Taille + r.Fichiers*enteteZip
+				if _, garde := p.gardes[len(p.cibles)-1]; garde {
+					break
+				}
+			}
 			if trouve && vol.Type == "amovible" && !slices.Contains(a.Amovibles, vol.Chemin) {
 				a.Amovibles = append(a.Amovibles, vol.Chemin)
 			}
@@ -228,7 +272,7 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 				a.Besoin += r.Taille
 			}
 		}
-		if dest != "" {
+		if dest != "" && op != OpArchiver {
 			if _, err := os.Lstat(filepath.Join(dest, filepath.Base(chemin))); err == nil {
 				a.Conflits = append(a.Conflits, filepath.Base(chemin))
 			}
@@ -265,12 +309,15 @@ func Executer(sc *scan.Scan, op string, cibles []scan.Cible, dest string, hwnd u
 	}
 	defer opMu.Unlock()
 
+	if op == OpArchiver {
+		return Bilan{}, errors.New("une archive se lance avec Archiver")
+	}
 	p, err := preparer(sc, op, cibles, dest)
 	if err != nil {
 		return Bilan{}, err
 	}
 	a := p.apercu
-	b := Bilan{Operation: op, Destination: a.Destination, Restants: append([]Refus{}, a.Ecartes...)}
+	b := nouveauBilan(op, a)
 	if a.Manque > 0 {
 		return b, fmt.Errorf("pas assez de place à l'arrivée : il manque %d octets", a.Manque)
 	}
@@ -340,6 +387,14 @@ func Executer(sc *scan.Scan, op string, cibles []scan.Cible, dest string, hwnd u
 	}
 	b.Perime = op == OpDeplacer && b.Faits > 0 && a.DansAnalyse
 	return b, nil
+}
+
+// nouveauBilan : listes jamais nulles, les écartés d'emblée parmi les restants.
+func nouveauBilan(op string, a Apercu) Bilan {
+	return Bilan{
+		Operation: op, Destination: a.Destination,
+		Restants: append([]Refus{}, a.Ecartes...), Sautes: []Refus{}, Gardes: []Refus{},
+	}
 }
 
 func raisonRestant(annule bool) string {

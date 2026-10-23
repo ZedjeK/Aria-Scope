@@ -11,11 +11,6 @@ import (
 	"aria-scope/internal/volumes"
 )
 
-func existe(p string) bool {
-	_, err := os.Lstat(p)
-	return err == nil
-}
-
 // bac (operations_other_test.go) :
 //
 //	disque/Téléchargements/  film.mkv 5000, setup.exe 300
