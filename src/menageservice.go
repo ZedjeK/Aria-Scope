@@ -1,8 +1,13 @@
 package main
 
 import (
+	"errors"
+	"log"
+	"os/exec"
+	"runtime"
 	"time"
 
+	"aria-scope/internal/journal"
 	"aria-scope/internal/menage"
 	"aria-scope/internal/scan"
 )
@@ -26,7 +31,21 @@ func (s *ScopeService) Executer(gen int, op string, cibles []scan.Cible, dest st
 	if err != nil {
 		return menage.Bilan{}, err
 	}
-	return menage.Executer(sc, op, cibles, dest, s.fenetre())
+	b, err := menage.Executer(sc, op, cibles, dest, s.fenetre())
+	if err == nil {
+		s.inscrire(b)
+	}
+	return b, err
+}
+
+// inscrire note une opération au journal. Un journal impossible à écrire ne
+// fait pas échouer l'opération, qui a déjà eu lieu.
+func (s *ScopeService) inscrire(b menage.Bilan) {
+	if e, ok := b.Entree(); ok && s.journal != nil {
+		if _, err := s.journal.Ajouter(e); err != nil {
+			log.Printf("journal : %v", err)
+		}
+	}
 }
 
 // ChoisirDestination ouvre le sélecteur du dossier d'arrivée. Renvoie "" si
@@ -77,6 +96,10 @@ func (s *ScopeService) Archiver(gen int, cibles []scan.Cible, dest string, opts 
 	s.mu.Lock()
 	s.archivage = a
 	s.mu.Unlock()
+	go func() {
+		<-a.Fini()
+		s.inscrire(a.Suivi().Bilan.Valeur())
+	}()
 	return nil
 }
 
@@ -116,4 +139,67 @@ func (s *ScopeService) ServiceShutdown() error {
 	case <-time.After(10 * time.Second):
 	}
 	return nil
+}
+
+// Journal : les opérations de ménage, la plus récente en premier.
+func (s *ScopeService) Journal() []journal.Entree {
+	if s.journal == nil {
+		return []journal.Entree{}
+	}
+	return s.journal.Lister()
+}
+
+func (s *ScopeService) entree(id string) (journal.Entree, error) {
+	if s.journal == nil {
+		return journal.Entree{}, errors.New("journal indisponible")
+	}
+	e, ok := s.journal.Trouver(id)
+	if !ok {
+		return e, errors.New("opération introuvable dans le journal")
+	}
+	return e, nil
+}
+
+// ApercuAnnulation récapitule ce qu'annuler une opération du journal ferait.
+func (s *ScopeService) ApercuAnnulation(id string) (menage.ApercuAnnulation, error) {
+	e, err := s.entree(id)
+	if err != nil {
+		return menage.ApercuAnnulation{}, err
+	}
+	return menage.ApercevoirAnnulation(e), nil
+}
+
+// AnnulerOperation défait une opération du journal et l'y marque comme annulée.
+func (s *ScopeService) AnnulerOperation(id string) (menage.BilanAnnulation, error) {
+	e, err := s.entree(id)
+	if err != nil {
+		return menage.BilanAnnulation{}, err
+	}
+	b, err := menage.Annuler(e, s.fenetre())
+	if err != nil {
+		return b, err
+	}
+	if b.Faits > 0 || b.ArchiveRecyclee {
+		if err := s.journal.Marquer(id, time.Now(), b.Resume); err != nil {
+			log.Printf("journal : %v", err)
+		}
+	}
+	return b, nil
+}
+
+// MontrerChemin ouvre l'Explorateur sur un chemin du journal (le fichier
+// sélectionné, ou le dossier ouvert).
+func (s *ScopeService) MontrerChemin(chemin string, selectionner bool) error {
+	if s.app == nil {
+		return errors.New("application non prête")
+	}
+	return s.app.Env.OpenFileManager(chemin, selectionner)
+}
+
+// OuvrirCorbeille ouvre la corbeille de Windows, d'où un élément se restaure.
+func (s *ScopeService) OuvrirCorbeille() error {
+	if runtime.GOOS != "windows" {
+		return errors.New("la corbeille s'ouvre depuis Windows")
+	}
+	return exec.Command("explorer.exe", "shell:RecycleBinFolder").Start()
 }

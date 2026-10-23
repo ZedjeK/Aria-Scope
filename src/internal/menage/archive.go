@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode"
 
+	"aria-scope/internal/journal"
 	"aria-scope/internal/scan"
 )
 
@@ -94,6 +95,14 @@ func (a *Archivage) Suivi() Suivi {
 // Annuler arrête l'écriture ou la vérification ; rien n'est laissé sur le
 // disque. Sans effet une fois les originaux en route vers la corbeille.
 func (a *Archivage) Annuler() { a.annuler.Store(true) }
+
+// Valeur renvoie le bilan, ou un bilan vide s'il n'y en a pas encore.
+func (b *Bilan) Valeur() Bilan {
+	if b == nil {
+		return Bilan{}
+	}
+	return *b
+}
 
 // Fini se ferme quand l'archivage est terminé.
 func (a *Archivage) Fini() <-chan struct{} { return a.fini }
@@ -266,7 +275,7 @@ func (a *Archivage) executer(sc *scan.Scan, p prepa, opts OptionsArchive, hwnd u
 	final := filepath.Join(ap.Destination, ap.Archive)
 	part := final + suffixePart
 
-	contenu, sautes, err := a.ecrire(part, p)
+	contenu, hauts, sautes, err := a.ecrire(part, p)
 	b.Sautes = sautes
 	if err == nil {
 		a.etape(PhaseVerification, "")
@@ -301,9 +310,16 @@ func (a *Archivage) executer(sc *scan.Scan, p prepa, opts OptionsArchive, hwnd u
 	}
 	b.Perime = ap.DansAnalyse
 
+	var recycles map[string]bool
 	if opts.Corbeille {
 		a.etape(PhaseCorbeille, "")
-		a.recycler(sc, p, contenu, sautes, hwnd, &b)
+		recycles = a.recycler(sc, p, contenu, sautes, hwnd, &b)
+	}
+	for i, c := range p.chemins {
+		if hauts[i] != "" {
+			e := p.infos[i]
+			b.Traces = append(b.Traces, journal.Element{Origine: c, Arrivee: hauts[i], Type: e.Type, Taille: e.Taille, Recycle: recycles[c]})
+		}
 	}
 	return b
 }
@@ -311,11 +327,14 @@ func (a *Archivage) executer(sc *scan.Scan, p prepa, opts OptionsArchive, hwnd u
 // ecrire crée l'archive dans part. Une erreur d'écriture, ou une lecture qui
 // échoue en plein fichier, annule tout ; un fichier qui ne s'ouvre pas est
 // simplement sauté et signalé.
-func (a *Archivage) ecrire(part string, p prepa) (contenu []fichierArchive, sautes []Refus, err error) {
+// hauts : pour chaque élément, son nom à la racine de l'archive (vide s'il
+// n'a pas pu être lu du tout).
+func (a *Archivage) ecrire(part string, p prepa) (contenu []fichierArchive, hauts []string, sautes []Refus, err error) {
 	sautes = []Refus{}
+	hauts = make([]string, len(p.chemins))
 	f, err := os.OpenFile(part, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
-		return nil, sautes, fmt.Errorf("impossible de créer l'archive : %w", err)
+		return nil, nil, sautes, fmt.Errorf("impossible de créer l'archive : %w", err)
 	}
 	defer func() {
 		if f != nil {
@@ -392,11 +411,16 @@ func (a *Archivage) ecrire(part string, p prepa) (contenu []fichierArchive, saut
 				sauter(chemin, "lien ou fichier spécial, non archivé")
 				continue
 			}
+			n := len(contenu)
 			if err := ajouterFichier(chemin, haut, i); err != nil {
-				return nil, sautes, err
+				return nil, nil, sautes, err
+			}
+			if len(contenu) > n {
+				hauts[i] = haut
 			}
 			continue
 		}
+		hauts[i] = haut
 		err = filepath.WalkDir(chemin, func(c string, d fs.DirEntry, err error) error {
 			if a.annuler.Load() {
 				return errAnnule
@@ -433,22 +457,22 @@ func (a *Archivage) ecrire(part string, p prepa) (contenu []fichierArchive, saut
 			}
 		})
 		if err != nil {
-			return nil, sautes, err
+			return nil, nil, sautes, err
 		}
 	}
 
 	if err := zw.Close(); err != nil {
-		return nil, sautes, err
+		return nil, nil, sautes, err
 	}
 	if err := tampon.Flush(); err != nil {
-		return nil, sautes, err
+		return nil, nil, sautes, err
 	}
 	if err := f.Sync(); err != nil {
-		return nil, sautes, err
+		return nil, nil, sautes, err
 	}
 	err = f.Close()
 	f = nil
-	return contenu, sautes, err
+	return contenu, hauts, sautes, err
 }
 
 // nomUnique : deux éléments du même nom venus de dossiers différents ne
@@ -511,7 +535,8 @@ func (a *Archivage) verifier(part string, contenu []fichierArchive) error {
 
 // recycler envoie à la corbeille les originaux dont tout le contenu est dans
 // l'archive vérifiée, tel qu'il est encore sur le disque.
-func (a *Archivage) recycler(sc *scan.Scan, p prepa, contenu []fichierArchive, sautes []Refus, hwnd uintptr, b *Bilan) {
+// Renvoie les chemins des originaux vraiment partis.
+func (a *Archivage) recycler(sc *scan.Scan, p prepa, contenu []fichierArchive, sautes []Refus, hwnd uintptr, b *Bilan) map[string]bool {
 	raisons := map[int]string{}
 	for i, r := range p.gardes {
 		raisons[i] = r
@@ -550,12 +575,12 @@ func (a *Archivage) recycler(sc *scan.Scan, p prepa, contenu []fichierArchive, s
 		}
 	}
 	if len(cibles) == 0 {
-		return
+		return nil
 	}
 	retraits, err := sc.PreparerRetrait(cibles)
 	if err != nil {
 		b.Erreur = err.Error()
-		return
+		return nil
 	}
 	chemins := make([]string, len(retraits))
 	for i, r := range retraits {
@@ -581,6 +606,7 @@ func (a *Archivage) recycler(sc *scan.Scan, p prepa, contenu []fichierArchive, s
 			b.Gardes = append(b.Gardes, Refus{Chemin: r.Chemin, Raison: raison})
 		}
 	}
+	return partis
 }
 
 // lecteur compte les octets pour la progression et s'arrête si on annule.

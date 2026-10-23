@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"aria-scope/internal/journal"
 	"aria-scope/internal/scan"
 	"aria-scope/internal/volumes"
 )
@@ -95,6 +96,9 @@ type Bilan struct {
 	Libere       int64   `json:"libere"`       // ce qu'ils pesaient
 	LibereDisque int64   `json:"libereDisque"` // idem, sur le disque
 	Gardes       []Refus `json:"gardes"`       // originaux laissés en place, et pourquoi
+
+	// Traces : ce qui a vraiment été fait, élément par élément, pour le journal.
+	Traces []journal.Element `json:"-"`
 }
 
 const maxApercu = 100
@@ -104,7 +108,8 @@ type prepa struct {
 	apercu  Apercu
 	cibles  []scan.Cible
 	chemins []string
-	gardes  map[int]string // archive : index des originaux qui ne seront jamais recyclés
+	infos   []ElementApercu // parallèle à chemins : type et poids de chaque élément
+	gardes  map[int]string  // archive : index des originaux qui ne seront jamais recyclés
 }
 
 func nomValide(nom string) bool {
@@ -233,7 +238,9 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 		a.Fichiers += r.Fichiers
 		a.Taille += r.Taille
 		a.Disque += r.Disque
-		a.Elements = append(a.Elements, ElementApercu{Chemin: chemin, Type: c.Type, Taille: r.Taille, Disque: r.Disque})
+		info := ElementApercu{Chemin: chemin, Type: c.Type, Taille: r.Taille, Disque: r.Disque}
+		a.Elements = append(a.Elements, info)
+		p.infos = append(p.infos, info)
 		p.cibles = append(p.cibles, c)
 		p.chemins = append(p.chemins, chemin)
 		if op == OpArchiver {
@@ -327,10 +334,6 @@ func Executer(sc *scan.Scan, op string, cibles []scan.Cible, dest string, hwnd u
 
 	// Copie : les originaux ne bougent pas, l'analyse non plus.
 	if op == OpCopier {
-		tailles := map[string]ElementApercu{}
-		for _, e := range a.Elements {
-			tailles[e.Chemin] = e
-		}
 		existaient := map[string]bool{}
 		for _, c := range p.chemins {
 			_, err := os.Lstat(filepath.Join(a.Destination, filepath.Base(c)))
@@ -340,11 +343,14 @@ func Executer(sc *scan.Scan, op string, cibles []scan.Cible, dest string, hwnd u
 		if err != nil {
 			b.Erreur = err.Error()
 		}
-		for _, c := range p.chemins {
-			if _, err := os.Lstat(filepath.Join(a.Destination, filepath.Base(c))); err == nil && !existaient[c] {
+		for i, c := range p.chemins {
+			arrivee := filepath.Join(a.Destination, filepath.Base(c))
+			if _, err := os.Lstat(arrivee); err == nil && !existaient[c] {
+				e := p.infos[i]
 				b.Faits++
-				b.Taille += tailles[c].Taille
-				b.Disque += tailles[c].Disque
+				b.Taille += e.Taille
+				b.Disque += e.Disque
+				b.Traces = append(b.Traces, journal.Element{Origine: c, Arrivee: arrivee, Type: e.Type, Taille: e.Taille})
 			} else if !existaient[c] {
 				b.Restants = append(b.Restants, Refus{Chemin: c, Raison: raisonRestant(b.Annule)})
 			}
@@ -379,6 +385,11 @@ func Executer(sc *scan.Scan, op string, cibles []scan.Cible, dest string, hwnd u
 		b.Taille += f.Taille
 		b.Disque += f.Disque
 		partis[f.Chemin] = true
+		t := journal.Element{Origine: f.Chemin, Type: f.Cible.Type, Taille: f.Taille}
+		if op == OpDeplacer {
+			t.Arrivee = filepath.Join(a.Destination, filepath.Base(f.Chemin))
+		}
+		b.Traces = append(b.Traces, t)
 	}
 	for _, r := range retraits {
 		if !partis[r.Chemin] {

@@ -44,6 +44,8 @@
     <path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11v6" /><path d="M14 11v6" />
   {:else if name === 'move'}
     <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3" /><path d="M3 7v10a2 2 0 0 0 2 2h7" /><path d="M15 17h7" /><path d="M19 14l3 3-3 3" />
+  {:else if name === 'history'}
+    <path d="M3 12a9 9 0 1 0 2.6-6.4" /><path d="M3 4v5h5" /><path d="M12 8v4l3 2" />
   {:else if name === 'archive'}
     <rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9" /><path d="M10 13h4" />
   {:else if name === 'copy'}

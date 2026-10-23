@@ -11,6 +11,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"aria-scope/internal/journal"
 	"aria-scope/internal/reglages"
 	"aria-scope/internal/scan"
 )
@@ -28,6 +29,9 @@ func main() {
 	svc := &ScopeService{}
 	if m, err := reglages.Ouvrir(); err == nil {
 		svc.reglages = m
+	}
+	if j, err := journal.Ouvrir(); err == nil {
+		svc.journal = j
 	}
 	var window *application.WebviewWindow
 

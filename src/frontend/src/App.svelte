@@ -6,10 +6,12 @@
   import { octets, pourcent, pourcentTexte } from './lib/format.js'
   import Accueil from './pages/Accueil.svelte'
   import Analyse from './pages/Analyse.svelte'
+  import Journal from './pages/Journal.svelte'
 
   const nav = [
     { id: 'accueil', label: 'Disques', cmd: 'disques', icon: 'home' },
     { id: 'analyse', label: 'Analyse', cmd: 'analyse', icon: 'scope' },
+    { id: 'journal', label: 'Journal', cmd: 'journal', icon: 'history' },
   ]
 
   const scan = $derived(app.etat?.scan)
@@ -89,6 +91,8 @@
 
     {#if app.page === 'accueil'}
       <Accueil />
+    {:else if app.page === 'journal'}
+      <Journal />
     {:else}
       <Analyse />
     {/if}

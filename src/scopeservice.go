@@ -7,6 +7,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"aria-scope/internal/journal"
 	"aria-scope/internal/menage"
 	"aria-scope/internal/reglages"
 	"aria-scope/internal/scan"
@@ -29,6 +30,7 @@ type ScopeService struct {
 	attendu int64 // espace occupé du volume si on scanne une racine de disque
 
 	archivage *menage.Archivage // le dernier lancé, en cours ou fini
+	journal   *journal.Journal  // nil si le dossier de configuration est introuvable
 }
 
 // Etat est ce que l'interface interroge régulièrement.
