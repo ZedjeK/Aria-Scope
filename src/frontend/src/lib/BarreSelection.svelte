@@ -3,7 +3,7 @@
   // Le récapitulatif vient du moteur, qui écarte les doublons (un fichier
   // contenu dans un dossier déjà sélectionné ne compte qu'une fois).
   import Icon from './Icon.svelte'
-  import ConfirmerCorbeille from './ConfirmerCorbeille.svelte'
+  import ConfirmerOperation from './ConfirmerOperation.svelte'
   import { app, call, message, toutDeselectionner } from './state.svelte.js'
   import { octets, nombre } from './format.js'
 
@@ -11,7 +11,7 @@
 
   let resume = $state(null)
   let erreur = $state('')
-  let confirmer = $state(false)
+  let confirmer = $state(null) // { operation, destination } de la fenêtre ouverte
 
   $effect(() => {
     const g = gen
@@ -30,12 +30,23 @@
       .catch((err) => (erreur = message(err)))
   })
 
+  // Déplacer ou copier : on choisit d'abord le dossier d'arrivée.
+  async function transferer(operation) {
+    erreur = ''
+    try {
+      const destination = await call('ChoisirDestination', operation === 'copier' ? 'Copier vers…' : 'Déplacer vers…')
+      if (destination) confirmer = { operation, destination }
+    } catch (err) {
+      erreur = message(err)
+    }
+  }
+
   function clavier(evt) {
     if (confirmer) return // la fenêtre de confirmation gère Échap
     if (evt.key === 'Escape' && app.marques.length > 0 && !evt.defaultPrevented) toutDeselectionner()
     if (evt.key === 'Delete' && app.marques.length > 0 && !evt.target?.closest?.('input, textarea, select')) {
       evt.preventDefault()
-      confirmer = true
+      confirmer = { operation: 'corbeille', destination: '' }
     }
   }
 </script>
@@ -64,14 +75,20 @@
     </div>
     <span class="aide">Ctrl+clic : ajouter · Maj+clic : étendre</span>
     <button class="btn-ghost small" onclick={toutDeselectionner} title="Échap">Tout désélectionner</button>
-    <button class="corbeille small" onclick={() => (confirmer = true)} title="Suppr">
+    <button class="action small" onclick={() => transferer('deplacer')} title="Déplacer vers un autre dossier">
+      <Icon name="move" size={15} /> Déplacer…
+    </button>
+    <button class="action small" onclick={() => transferer('copier')} title="Copier vers un autre dossier">
+      <Icon name="copy" size={15} /> Copier…
+    </button>
+    <button class="corbeille small" onclick={() => (confirmer = { operation: 'corbeille', destination: '' })} title="Suppr">
       <Icon name="trash" size={15} /> Corbeille…
     </button>
   </div>
 {/if}
 
 {#if confirmer}
-  <ConfirmerCorbeille {gen} {mode} onfermer={() => (confirmer = false)} />
+  <ConfirmerOperation {gen} {mode} operation={confirmer.operation} destination={confirmer.destination} onfermer={() => (confirmer = null)} />
 {/if}
 
 <style>
@@ -133,6 +150,25 @@
     flex: none;
     font-size: 11px;
     color: var(--dim);
+  }
+  .action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .action:hover {
+    border-color: var(--accent-2);
+    background: var(--hover);
   }
   .corbeille {
     display: inline-flex;

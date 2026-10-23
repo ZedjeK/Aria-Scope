@@ -5,24 +5,40 @@ import (
 	"aria-scope/internal/scan"
 )
 
-// ApercuCorbeille récapitule ce qu'enverrait la corbeille, sans rien toucher.
-func (s *ScopeService) ApercuCorbeille(gen int, cibles []scan.Cible) (menage.Apercu, error) {
+// Apercu récapitule ce que ferait une opération de ménage (« corbeille »,
+// « deplacer », « copier »), sans rien toucher. dest : dossier d'arrivée
+// d'un déplacement ou d'une copie.
+func (s *ScopeService) Apercu(gen int, op string, cibles []scan.Cible, dest string) (menage.Apercu, error) {
 	sc, err := s.courant(gen)
 	if err != nil {
 		return menage.Apercu{}, err
 	}
-	return menage.ApercuCorbeille(sc, cibles)
+	return menage.Apercevoir(sc, op, cibles, dest)
 }
 
-// Corbeille envoie les cibles à la corbeille de Windows et met l'analyse à
-// jour pour ce qui a vraiment quitté le disque. Les éléments protégés ne
-// sont jamais touchés.
-func (s *ScopeService) Corbeille(gen int, cibles []scan.Cible) (menage.Bilan, error) {
+// Executer réalise l'opération par l'Explorateur de Windows et met l'analyse
+// à jour pour ce qui a quitté son emplacement. Les éléments protégés ne sont
+// jamais touchés.
+func (s *ScopeService) Executer(gen int, op string, cibles []scan.Cible, dest string) (menage.Bilan, error) {
 	sc, err := s.courant(gen)
 	if err != nil {
 		return menage.Bilan{}, err
 	}
-	return menage.EnvoyerCorbeille(sc, cibles, s.fenetre())
+	return menage.Executer(sc, op, cibles, dest, s.fenetre())
+}
+
+// ChoisirDestination ouvre le sélecteur du dossier d'arrivée. Renvoie "" si
+// l'utilisateur annule.
+func (s *ScopeService) ChoisirDestination(titre string) (string, error) {
+	if s.app == nil {
+		return "", nil
+	}
+	return s.app.Dialog.OpenFile().
+		SetTitle(titre).
+		CanChooseDirectories(true).
+		CanChooseFiles(false).
+		CanCreateDirectories(true).
+		PromptForSingleSelection()
 }
 
 // fenetre renvoie le handle natif de la fenêtre d'Aria (0 si indisponible).

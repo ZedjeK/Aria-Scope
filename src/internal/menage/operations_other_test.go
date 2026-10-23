@@ -70,22 +70,22 @@ func TestCorbeilleDeBoutEnBout(t *testing.T) {
 	}
 
 	// Aperçu : rien ne bouge
-	a, err := ApercuCorbeille(s, cibles)
+	a, err := Apercevoir(s, OpCorbeille, cibles, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if a.Nombre != 2 || a.Taille != 7000 || len(a.Proteges) != 1 || a.Elements[0].Taille != 5000 {
+	if a.Nombre != 2 || a.Taille != 7000 || len(a.Ecartes) != 1 || a.Elements[0].Taille != 5000 {
 		t.Fatalf("aperçu : %+v", a)
 	}
 	if _, err := os.Stat(filepath.Join(racine, "Jeux", "vieux")); err != nil {
 		t.Fatal("l'aperçu a touché au disque")
 	}
 
-	b, err := EnvoyerCorbeille(s, cibles, 0)
+	b, err := Executer(s, OpCorbeille, cibles, "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b.Retires != 2 || b.Taille != 7000 || b.Erreur != "" || b.Annule {
+	if b.Faits != 2 || b.Taille != 7000 || b.Erreur != "" || b.Annule {
 		t.Fatalf("bilan : %+v", b)
 	}
 	if len(b.Restants) != 1 || !strings.Contains(b.Restants[0].Raison, "système") {
@@ -114,13 +114,13 @@ func TestCorbeilleDeBoutEnBout(t *testing.T) {
 func TestCorbeilleRefuse(t *testing.T) {
 	_, s := bac(t)
 	telech := cibleDossier(t, s, 0, "Téléchargements")
-	if _, err := ApercuCorbeille(s, []scan.Cible{{Type: "fichier", ID: telech.ID, Nom: "../Jeux"}}); err == nil {
+	if _, err := Apercevoir(s, OpCorbeille, []scan.Cible{{Type: "fichier", ID: telech.ID, Nom: "../Jeux"}}, ""); err == nil {
 		t.Error("un nom de fichier en forme de chemin a été accepté")
 	}
 	// Tout protégé : rien n'est envoyé
 	systeme := cibleDossier(t, s, 0, "Systeme")
-	b, err := EnvoyerCorbeille(s, []scan.Cible{systeme}, 0)
-	if err != nil || b.Retires != 0 || len(b.Restants) != 1 {
+	b, err := Executer(s, OpCorbeille, []scan.Cible{systeme}, "", 0)
+	if err != nil || b.Faits != 0 || len(b.Restants) != 1 {
 		t.Fatalf("bilan : %+v, %v", b, err)
 	}
 	if _, err := os.ReadDir(DossierCorbeille); err == nil {
@@ -131,11 +131,11 @@ func TestCorbeilleRefuse(t *testing.T) {
 func TestListesJamaisNulles(t *testing.T) {
 	_, s := bac(t)
 	jeux := cibleDossier(t, s, 0, "Jeux")
-	a, err := ApercuCorbeille(s, []scan.Cible{jeux})
-	if err != nil || a.Proteges == nil || a.Amovibles == nil || a.Elements == nil {
+	a, err := Apercevoir(s, OpCorbeille, []scan.Cible{jeux}, "")
+	if err != nil || a.Ecartes == nil || a.Amovibles == nil || a.Elements == nil {
 		t.Fatalf("aperçu : %+v, %v", a, err)
 	}
-	b, err := EnvoyerCorbeille(s, []scan.Cible{jeux}, 0)
+	b, err := Executer(s, OpCorbeille, []scan.Cible{jeux}, "", 0)
 	if err != nil || b.Restants == nil {
 		t.Fatalf("bilan : %+v, %v", b, err)
 	}

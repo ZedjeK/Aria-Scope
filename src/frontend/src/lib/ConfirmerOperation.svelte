@@ -1,12 +1,21 @@
 <script>
-  // Confirmation avant l'envoi à la corbeille : ce qui part, ce qui est
-  // protégé, et les disques où Windows n'a souvent pas de corbeille.
+  // Confirmation avant une opération de ménage (corbeille, déplacement,
+  // copie) : ce qui est concerné, ce qui est écarté et pourquoi, la place à
+  // l'arrivée, et les cas où Windows n'a pas de corbeille.
   import { onMount } from 'svelte'
   import Icon from './Icon.svelte'
   import { app, call, message, apresMenage } from './state.svelte.js'
   import { octets, nombre } from './format.js'
 
-  let { gen, mode, onfermer } = $props()
+  let { gen, mode, operation = 'corbeille', destination = '', onfermer } = $props()
+
+  const TEXTES = {
+    corbeille: { titre: 'Envoyer à la corbeille ?', icone: 'trash', verbe: 'Envoyer', suite: 'à la corbeille', encours: 'Envoi en cours…' },
+    deplacer: { titre: 'Déplacer ?', icone: 'move', verbe: 'Déplacer', suite: '', encours: 'Déplacement en cours…' },
+    copier: { titre: 'Copier ?', icone: 'copy', verbe: 'Copier', suite: '', encours: 'Copie en cours…' },
+  }
+  const t = $derived(TEXTES[operation] ?? TEXTES.corbeille)
+  const danger = $derived(operation === 'corbeille')
 
   let apercu = $state(null)
   let erreur = $state('')
@@ -16,22 +25,41 @@
 
   const cibles = $state.snapshot(app.marques)
   const val = (x) => (mode === 'disque' ? x.disque : x.taille)
+  const pluriel = (n, mot) => `${nombre(n)} ${mot}${n > 1 ? 's' : ''}`
 
   onMount(() => {
     annuler?.focus() // le bouton sûr a le focus
-    call('ApercuCorbeille', gen, cibles)
-      .then((a) => (apercu = { ...a, elements: a.elements ?? [], proteges: a.proteges ?? [], amovibles: a.amovibles ?? [] }))
+    call('Apercu', gen, operation, cibles, destination)
+      .then(
+        (a) =>
+          (apercu = {
+            ...a,
+            elements: a.elements ?? [],
+            ecartes: a.ecartes ?? [],
+            conflits: a.conflits ?? [],
+            amovibles: a.amovibles ?? [],
+          }),
+      )
       .catch((err) => (erreur = message(err)))
   })
 
-  const possible = $derived(apercu && apercu.nombre > 0 && (apercu.amovibles.length === 0 || compris) && !enCours)
+  const possible = $derived(
+    apercu && apercu.nombre > 0 && apercu.manque <= 0 && (apercu.amovibles.length === 0 || compris) && !enCours,
+  )
 
-  async function envoyer() {
+  const libelleBouton = $derived.by(() => {
+    if (enCours) return t.encours
+    const n = apercu?.nombre ?? 0
+    const quoi = n > 1 ? `les ${nombre(n)} éléments` : "l'élément"
+    return `${t.verbe} ${quoi}${t.suite ? ' ' + t.suite : ''}`
+  })
+
+  async function executer() {
     enCours = true
     erreur = ''
     try {
-      const bilan = await call('Corbeille', gen, cibles)
-      await apresMenage(bilan, 'corbeille')
+      const bilan = await call('Executer', gen, operation, cibles, destination)
+      await apresMenage(bilan, operation)
       onfermer?.()
     } catch (err) {
       erreur = message(err)
@@ -51,11 +79,18 @@
 <svelte:window onkeydown={clavier} />
 
 <div class="voile" role="presentation" onclick={(e) => e.target === e.currentTarget && !enCours && onfermer?.()}>
-  <div class="boite" role="alertdialog" aria-modal="true" aria-labelledby="titre-corbeille">
+  <div class="boite" class:danger-cadre={danger} role="alertdialog" aria-modal="true" aria-labelledby="titre-operation">
     <div class="tete">
-      <span class="icone"><Icon name="trash" size={22} /></span>
-      <h2 id="titre-corbeille">Envoyer à la corbeille ?</h2>
+      <span class="icone" class:icone-danger={danger}><Icon name={t.icone} size={22} /></span>
+      <h2 id="titre-operation">{t.titre}</h2>
     </div>
+
+    {#if destination}
+      <p class="vers">
+        <span class="eyebrow">vers</span>
+        <span class="chemin-dest" title={destination}><Icon name="folder" size={14} /> <bdi>{destination}</bdi></span>
+      </p>
+    {/if}
 
     {#if erreur}
       <p class="error">{erreur}</p>
@@ -66,8 +101,8 @@
     {:else if apercu}
       {#if apercu.nombre > 0}
         <p class="resume">
-          <strong>{nombre(apercu.nombre)} élément{apercu.nombre > 1 ? 's' : ''}</strong> · {nombre(apercu.fichiers)} fichier{apercu.fichiers > 1 ? 's' : ''}
-          · <strong class="libere">{octets(val(apercu))}</strong> libérés
+          <strong>{pluriel(apercu.nombre, 'élément')}</strong> · {pluriel(apercu.fichiers, 'fichier')}
+          · <strong class="libere">{octets(val(apercu))}</strong>{operation === 'corbeille' ? ' libérés' : ''}
         </p>
         <ul class="liste">
           {#each apercu.elements as e (e.chemin)}
@@ -81,24 +116,55 @@
             <li class="hint">… et {nombre(apercu.nombre - apercu.elements.length)} autres, plus légers</li>
           {/if}
         </ul>
-        {#if apercu.amovibles.length === 0}<p class="hint">Tout reste restaurable depuis la corbeille de Windows.</p>{/if}
+        {#if operation === 'corbeille' && apercu.amovibles.length === 0}
+          <p class="hint">Tout reste restaurable depuis la corbeille de Windows.</p>
+        {:else if operation !== 'corbeille'}
+          <p class="hint">Windows affiche sa progression et peut annuler l'opération depuis l'Explorateur (Ctrl+Z).</p>
+        {/if}
       {:else}
-        <p class="resume">Rien ne peut être envoyé à la corbeille dans cette sélection.</p>
+        <p class="resume">Rien dans cette sélection ne peut être {operation === 'copier' ? 'copié' : operation === 'deplacer' ? 'déplacé' : 'envoyé à la corbeille'}.</p>
       {/if}
 
-      {#if apercu.proteges.length > 0}
+      {#if apercu.besoin > 0 && apercu.libre >= 0}
+        {#if apercu.manque > 0}
+          <div class="encart danger">
+            <strong><Icon name="warn" size={14} /> Pas assez de place à l'arrivée</strong>
+            <p>Il faut {octets(apercu.besoin)}, il reste {octets(apercu.libre)} : il manque <strong>{octets(apercu.manque)}</strong>.</p>
+          </div>
+        {:else}
+          <p class="place"><Icon name="check" size={14} /> {octets(apercu.besoin)} nécessaires · {octets(apercu.libre)} libres à l'arrivée</p>
+        {/if}
+      {/if}
+
+      {#if apercu.conflits.length > 0}
+        <div class="encart filtre">
+          <Icon name="warn" size={14} />
+          <span>
+            {pluriel(apercu.conflits.length, 'nom')} déjà pris à l'arrivée ({apercu.conflits.slice(0, 3).join(', ')}{apercu.conflits.length > 3 ? '…' : ''}) :
+            Windows te demandera s'il faut remplacer ou garder les deux.
+          </span>
+        </div>
+      {/if}
+
+      {#if apercu.ecartes.length > 0}
         <div class="encart protege">
-          <strong><Icon name="shield" size={14} /> {nombre(apercu.proteges.length)} élément{apercu.proteges.length > 1 ? 's protégés, qui ne seront pas touchés' : ' protégé, qui ne sera pas touché'}</strong>
+          <strong><Icon name="shield" size={14} /> {apercu.ecartes.length > 1 ? `${nombre(apercu.ecartes.length)} éléments écartés, qui ne seront pas touchés` : '1 élément écarté, qui ne sera pas touché'}</strong>
           <ul>
-            {#each apercu.proteges.slice(0, 5) as p (p.chemin)}<li><bdi>{p.chemin}</bdi> : {p.raison}</li>{/each}
-            {#if apercu.proteges.length > 5}<li>… et {apercu.proteges.length - 5} autres</li>{/if}
+            {#each apercu.ecartes.slice(0, 5) as p (p.chemin)}<li><bdi>{p.chemin}</bdi> : {p.raison}</li>{/each}
+            {#if apercu.ecartes.length > 5}<li>… et {apercu.ecartes.length - 5} autres</li>{/if}
           </ul>
+        </div>
+      {/if}
+
+      {#if apercu.dansAnalyse && apercu.nombre > 0}
+        <div class="encart info">
+          <Icon name="scope" size={14} /> L'arrivée fait partie de l'analyse : ce qui y arrive n'apparaîtra qu'après une nouvelle analyse.
         </div>
       {/if}
 
       {#if apercu.filtre}
         <div class="encart filtre">
-          <Icon name="warn" size={14} /> Analyse filtrée : un dossier part en entier, y compris les fichiers que les filtres cachaient. Il peut donc peser plus lourd que ce qui est indiqué.
+          <Icon name="warn" size={14} /> Analyse filtrée : un dossier est traité en entier, y compris les fichiers que les filtres cachaient. Il peut donc peser plus lourd que ce qui est indiqué.
         </div>
       {/if}
 
@@ -113,9 +179,9 @@
 
     <div class="actions">
       <button class="btn-ghost" bind:this={annuler} disabled={enCours} onclick={() => onfermer?.()}>Annuler</button>
-      <button class="btn-danger" disabled={!possible} onclick={envoyer}>
-        <Icon name="trash" size={16} />
-        {enCours ? 'Envoi en cours…' : `Envoyer ${apercu?.nombre > 1 ? `les ${nombre(apercu.nombre)} éléments` : "l'élément"} à la corbeille`}
+      <button class={danger ? 'btn-danger' : 'btn-primary'} disabled={!possible} onclick={executer}>
+        <Icon name={t.icone} size={16} />
+        {libelleBouton}
       </button>
     </div>
   </div>
@@ -142,9 +208,13 @@
     gap: 14px;
     padding: 22px;
     background: var(--surface);
-    border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--action) 55%, transparent);
     border-radius: var(--cut) 0;
     corner-shape: bevel;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 24px color-mix(in srgb, var(--action) 14%, transparent);
+  }
+  .boite.danger-cadre {
+    border-color: color-mix(in srgb, var(--danger) 55%, transparent);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 24px color-mix(in srgb, var(--danger) 18%, transparent);
   }
   .tete {
@@ -157,8 +227,47 @@
     padding: 8px;
     border-radius: 8px 0;
     corner-shape: bevel;
+    background: color-mix(in srgb, var(--action) 14%, transparent);
+    color: var(--action);
+  }
+  .icone.icone-danger {
     background: color-mix(in srgb, var(--danger) 14%, transparent);
     color: var(--danger);
+  }
+  .vers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: -4px 0 0;
+  }
+  .chemin-dest {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px 0;
+    corner-shape: bevel;
+    background: var(--surface-sunken);
+    color: var(--accent);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .place {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .info {
+    display: flex;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--accent-2) 45%, transparent);
+    background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+    color: var(--ghost);
   }
   h2 {
     margin: 0;
@@ -238,6 +347,7 @@
   }
   .filtre {
     display: flex;
+    align-items: flex-start;
     gap: 8px;
     border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
     background: color-mix(in srgb, var(--warn) 8%, transparent);

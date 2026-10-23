@@ -42,6 +42,10 @@
     <path d="M4 5h16l-6 7.5V19l-4 2v-8.5z" />
   {:else if name === 'trash'}
     <path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11v6" /><path d="M14 11v6" />
+  {:else if name === 'move'}
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3" /><path d="M3 7v10a2 2 0 0 0 2 2h7" /><path d="M15 17h7" /><path d="M19 14l3 3-3 3" />
+  {:else if name === 'copy'}
+    <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
   {:else if name === 'shield'}
     <path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" />
   {:else if name === 'check'}

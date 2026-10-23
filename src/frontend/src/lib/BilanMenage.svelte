@@ -1,29 +1,38 @@
 <script>
   // Bilan de la dernière opération de ménage, au-dessus de l'analyse.
   import Icon from './Icon.svelte'
-  import { app } from './state.svelte.js'
+  import { app, relancer } from './state.svelte.js'
   import { octets, nombre } from './format.js'
 
   let { mode } = $props()
   let details = $state(false)
 
   const b = $derived(app.bilan)
-  const verbe = { corbeille: 'envoyé{s} à la corbeille' }
+  const verbe = { corbeille: 'envoyé{s} à la corbeille', deplacer: 'déplacé{s}', copier: 'copié{s}' }
   const fait = (n) => (verbe[b?.operation] ?? 'traité{s}').replace('{s}', n > 1 ? 's' : '')
+  // L'espace n'est libéré que par la corbeille ; un déplacement le libère sur ce disque-ci.
+  const suffixe = $derived(b?.operation === 'corbeille' ? ' libérés' : b?.operation === 'deplacer' ? ' déplacés' : ' copiés')
 </script>
 
 {#if b}
   <div class="bilan" class:mitige={b.restants?.length > 0 || b.erreur} role="status">
-    <span class="icone"><Icon name={b.retires > 0 ? 'check' : 'warn'} size={18} /></span>
+    <span class="icone"><Icon name={b.faits > 0 ? 'check' : 'warn'} size={18} /></span>
     <div class="texte">
       <span class="titre">
-        {#if b.retires > 0}
-          <strong>{nombre(b.retires)} élément{b.retires > 1 ? 's' : ''}</strong> {fait(b.retires)} · <strong>{octets(mode === 'disque' ? b.disque : b.taille)}</strong> libérés
+        {#if b.faits > 0}
+          <strong>{nombre(b.faits)} élément{b.faits > 1 ? 's' : ''}</strong> {fait(b.faits)}{#if b.destination}{' vers '}<span class="dest"><bdi>{b.destination}</bdi></span>{/if}
+          · <strong>{octets(mode === 'disque' ? b.disque : b.taille)}</strong>{suffixe}
         {:else}
           Aucun élément n'a été {fait(1)}
         {/if}
       </span>
       {#if b.annule}<span class="detail">Opération interrompue.</span>{/if}
+      {#if b.perime}
+        <span class="detail">
+          L'arrivée fait partie de l'analyse : ce qui y est arrivé n'apparaîtra qu'après une nouvelle analyse.
+          <button class="lien" onclick={relancer}>Relancer l'analyse</button>
+        </span>
+      {/if}
       {#if b.erreur}<span class="detail err">Windows : {b.erreur}</span>{/if}
       {#if b.restants?.length > 0}
         <button class="lien" onclick={() => (details = !details)}>
@@ -78,6 +87,10 @@
   }
   .detail {
     font-size: 12px;
+  }
+  .dest {
+    color: var(--accent);
+    overflow-wrap: anywhere;
   }
   .err {
     color: var(--danger);

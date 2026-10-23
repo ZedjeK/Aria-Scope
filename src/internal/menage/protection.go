@@ -76,3 +76,18 @@ func (r Regles) Raison(chemin string) string {
 	}
 	return ""
 }
+
+// RaisonDestination renvoie pourquoi on ne peut rien déposer dans chemin
+// (dossier système), ou "". La racine d'un disque est une destination valable.
+func (r Regles) RaisonDestination(chemin string) string {
+	if !filepath.IsAbs(chemin) {
+		return "chemin incomplet"
+	}
+	p := normaliser(chemin)
+	for _, a := range r.Arbres {
+		if a != "" && dans(p, normaliser(a)) {
+			return "dossier système (" + a + ")"
+		}
+	}
+	return ""
+}
