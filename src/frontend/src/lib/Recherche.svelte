@@ -113,6 +113,15 @@
 
   const arreter = () => call('ArreterRecherche').catch((err) => (erreur = message(err)))
 
+  // Limite historique de Windows (MAX_PATH) : 260 caractères, caractère de
+  // fin compris ; un chemin de 260 caractères ou plus pose problème.
+  const LIMITE = 260
+
+  function cheminsLongs() {
+    Object.assign(f, { nom: '', regex: false, quoi: 'tout', min: '', max: '', apres: '', avant: '', familles: [], cheminMin: LIMITE })
+    chercher()
+  }
+
   function effacer() {
     Object.assign(f, { nom: '', regex: false, quoi: 'fichiers', min: '', max: '', apres: '', avant: '', familles: [], cheminMin: '' })
   }
@@ -132,7 +141,26 @@
   }
 
   const affichees = $derived((lignes ?? []).slice(0, visibles))
-  const totalListe = $derived((lignes ?? []).reduce((t, x) => t + (mode === 'disque' ? x.disque : x.taille), 0))
+  // Total sans double compte : ce qui se trouve dans un dossier déjà listé
+  // est compris dans la taille de ce dossier.
+  const totalListe = $derived.by(() => {
+    const l = lignes ?? []
+    const sep = (d) => (d.includes('\\') ? '\\' : '/')
+    const complet = (x) => (x.dossier ? x.dossier.replace(/[\\/]+$/, '') + sep(x.dossier) + x.nom : x.nom)
+    const dossiers = new Set(l.filter((x) => x.type === 'dossier').map(complet))
+    let t = 0
+    for (const x of l) {
+      let d = x.dossier ?? ''
+      let dedans = false
+      while (d && !dedans) {
+        dedans = dossiers.has(d.replace(/[\\/]+$/, ''))
+        const i = Math.max(d.lastIndexOf('/'), d.lastIndexOf('\\'))
+        d = i > 0 ? d.slice(0, i) : ''
+      }
+      if (!dedans) t += mode === 'disque' ? x.disque : x.taille
+    }
+    return t
+  })
   const avecLongueur = $derived((suivi?.criteres?.cheminMin ?? 0) > 0)
   const avance = $derived(suivi && suivi.dossiers > 0 ? Math.min(1, suivi.lus / suivi.dossiers) : 0)
   const montrerLigne = (x) => (x.type === 'fichier' ? montrer(gen, x.id, x.nom) : montrer(gen, x.id))
@@ -208,6 +236,9 @@
   <div class="pied">
     <Portee {gen} {selection} bind:portee={f.portee} />
     <div class="actions">
+      <button type="button" class="btn-ghost" onclick={cheminsLongs} disabled={enCours} title="Fichiers et dossiers dont le chemin atteint {LIMITE} caractères">
+        <Icon name="warn" size={15} /> Chemins trop longs
+      </button>
       <button type="button" class="btn-ghost" onclick={effacer} disabled={enCours}>Effacer</button>
       {#if enCours}
         <button type="button" class="btn-primary" onclick={arreter}><Icon name="stop" size={16} /> Arrêter</button>
@@ -239,6 +270,25 @@
       </p>
     {/if}
   </div>
+{/if}
+
+{#if suivi && !enCours && lignes && (suivi.criteres?.cheminMin ?? 0) >= LIMITE}
+  {#if lignes.length > 0}
+    <div class="encart" role="note">
+      <strong><Icon name="warn" size={14} /> Chemins de {LIMITE} caractères ou plus</strong>
+      <p>
+        Windows limite historiquement un chemin à {LIMITE} caractères, caractère de fin compris. Depuis Windows 10, les logiciels prévus pour peuvent
+        dépasser cette limite, mais beaucoup d'autres non : l'Explorateur, certains outils de sauvegarde ou de synchronisation, de vieux programmes
+        n'arrivent plus à copier, ouvrir ou supprimer ces éléments.
+      </p>
+      <p>
+        Le ménage d'Aria passe par l'Explorateur, qui peut lui aussi les refuser. Le plus simple : <strong>raccourcir le chemin par le haut</strong>,
+        en renommant un dossier parent ou en déplaçant la branche plus près de la racine du disque. La colonne « Chemin » donne la longueur de chacun.
+      </p>
+    </div>
+  {:else}
+    <p class="hint ok"><Icon name="check" size={14} /> Aucun chemin de {LIMITE} caractères ou plus : rien à craindre de ce côté.</p>
+  {/if}
 {/if}
 
 {#if lignes && lignes.length > 0}
@@ -290,7 +340,7 @@
   {#if lignes.length > visibles}
     <button class="btn-ghost plus" onclick={() => (visibles += PAS)}>Afficher {nombre(Math.min(PAS, lignes.length - visibles))} de plus ({nombre(lignes.length - visibles)} restants)</button>
   {/if}
-{:else if lignes && suivi && !enCours}
+{:else if lignes && suivi && !enCours && (suivi.criteres?.cheminMin ?? 0) < LIMITE}
   <p class="hint">Rien ne correspond à ces critères.</p>
 {/if}
 
@@ -450,6 +500,34 @@
   }
   .plus {
     align-self: center;
+  }
+  .encart {
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    background: color-mix(in srgb, var(--warn) 7%, transparent);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .encart > strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--warn);
+  }
+  .encart p {
+    margin: 6px 0 0;
+  }
+  .encart p strong {
+    color: var(--text);
+  }
+  .ok {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
   }
 
   /* Liste des résultats : comme celle des plus gros fichiers */
