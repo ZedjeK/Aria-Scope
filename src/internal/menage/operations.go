@@ -183,6 +183,23 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 		Elements: []ElementApercu{}, Ecartes: []Refus{}, Conflits: []string{}, Amovibles: []string{}, Gardes: []Refus{},
 	}
 	p.gardes = map[int]string{}
+	// Le disque d'un chemin, demandé une fois par dossier : interroger Windows
+	// pour chacun de milliers d'éléments serait lent (et un lecteur réseau
+	// endormi pourrait tout figer).
+	type vol struct {
+		v  volumes.Volume
+		ok bool
+	}
+	connus := map[string]vol{}
+	disqueDe := func(chemin string) (volumes.Volume, bool) {
+		cle := filepath.Dir(chemin)
+		if x, vu := connus[cle]; vu {
+			return x.v, x.ok
+		}
+		v, ok := volumeDe(chemin)
+		connus[cle] = vol{v, ok}
+		return v, ok
+	}
 	var volDest volumes.Volume
 	if dest != "" {
 		volDest, _ = volumeDe(dest)
@@ -257,7 +274,7 @@ func preparer(sc *scan.Scan, op string, cibles []scan.Cible, dest string) (prepa
 			}
 		}
 
-		vol, trouve := volumeDe(chemin)
+		vol, trouve := disqueDe(chemin)
 		switch op {
 		case OpCorbeille, OpArchiver:
 			if op == OpArchiver {

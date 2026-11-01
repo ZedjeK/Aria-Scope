@@ -5,9 +5,9 @@
   import { onMount, onDestroy } from 'svelte'
   import Icon from './Icon.svelte'
   import Portee from './Portee.svelte'
-  import { app, call, message, montrer, cliquerElement, estMarque } from './state.svelte.js'
+  import { app, call, message, montrer, cliquerElement } from './state.svelte.js'
   import { octets, nombre, dateCourte, dateLongue } from './format.js'
-  import { estLigneChoisie } from './selection.js'
+  import { estLigneChoisie, marquable, cibleDe, cleMarque } from './selection.js'
 
   let { gen, mode, selection = $bindable(null) } = $props()
 
@@ -141,6 +141,14 @@
   }
 
   const affichees = $derived((lignes ?? []).slice(0, visibles))
+  // Ensemble des éléments sélectionnés : rapide même avec des milliers de lignes.
+  const marquees = $derived(new Set(app.marques.map(cleMarque)))
+  const selectionnables = $derived((lignes ?? []).filter(marquable))
+  const toutChoisi = $derived(selectionnables.length > 0 && selectionnables.every((x) => marquees.has(cleMarque(cibleDe(x)))))
+  function toutSelectionner() {
+    app.marques = toutChoisi ? [] : selectionnables.map(cibleDe)
+    app.ancre = null
+  }
   // Total sans double compte : ce qui se trouve dans un dossier déjà listé
   // est compris dans la taille de ce dossier.
   const totalListe = $derived.by(() => {
@@ -266,6 +274,9 @@
           <strong>{nombre(lignes?.length ?? 0)}</strong> résultat{(lignes?.length ?? 0) > 1 ? 's' : ''} · <strong>{octets(totalListe)}</strong>
         {/if}
         {#if suivi.etat === 'arrete'}· recherche arrêtée avant la fin{/if}
+        {#if selectionnables.length > 1}
+          <button class="lien tout" onclick={toutSelectionner}>{toutChoisi ? 'tout désélectionner' : `tout sélectionner (${nombre(selectionnables.length)})`}</button>
+        {/if}
         {#if suivi.illisibles > 0}· {nombre(suivi.illisibles)} dossier{suivi.illisibles > 1 ? 's' : ''} illisible{suivi.illisibles > 1 ? 's' : ''}{/if}
       </p>
     {/if}
@@ -312,7 +323,7 @@
     </div>
 
     {#each affichees as x (`${x.type}/${x.id}/${x.nom}`)}
-      {@const choisie = estMarque(x) || estLigneChoisie(selection, x)}
+      {@const choisie = (marquable(x) && marquees.has(cleMarque(cibleDe(x)))) || estLigneChoisie(selection, x)}
       <div
         class="ligne"
         class:choisie
@@ -437,6 +448,10 @@
     border-color: color-mix(in srgb, var(--accent) 60%, transparent);
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
+  }
+  .tout {
+    margin-left: 6px;
+    color: var(--action);
   }
   .deplier {
     margin-left: 8px;

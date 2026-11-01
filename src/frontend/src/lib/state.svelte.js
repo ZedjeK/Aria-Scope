@@ -174,7 +174,25 @@ export function choisirSeul(e) {
   app.ancre = app.marques[0] ?? null
 }
 
-export const estMarque = (e) => marquable(e) && app.marques.some((m) => cleMarque(m) === cleMarque(cibleDe(e)))
+// Les clés sélectionnées, reconstruites seulement quand la sélection change :
+// chaque ligne affichée pose la question, et la sélection peut compter des
+// milliers d'éléments (« tout sélectionner » dans la recherche).
+let cacheTableau = null
+let cacheTaille = -1
+let cacheDernier = ''
+let cacheCles = new Set()
+export function estMarque(e) {
+  if (!marquable(e)) return false
+  const m = app.marques
+  const dernier = m.length ? cleMarque(m[m.length - 1]) : ''
+  if (m !== cacheTableau || m.length !== cacheTaille || dernier !== cacheDernier) {
+    cacheCles = new Set(m.map(cleMarque))
+    cacheTableau = m
+    cacheTaille = m.length
+    cacheDernier = dernier
+  }
+  return cacheCles.has(cleMarque(cibleDe(e)))
+}
 
 export function toutDeselectionner() {
   app.marques = []
