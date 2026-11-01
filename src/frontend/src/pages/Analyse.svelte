@@ -7,6 +7,7 @@
   import Types from '../lib/Types.svelte'
   import Ages from '../lib/Ages.svelte'
   import Recherche from '../lib/Recherche.svelte'
+  import Doublons from '../lib/Doublons.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
   import BarreSelection from '../lib/BarreSelection.svelte'
   import BilanMenage from '../lib/BilanMenage.svelte'
@@ -125,6 +126,7 @@
               <button role="tab" aria-selected={app.vue === 'types'} class:on={app.vue === 'types'} onclick={() => (app.vue = 'types')}>types</button>
               <button role="tab" aria-selected={app.vue === 'ages'} class:on={app.vue === 'ages'} onclick={() => (app.vue = 'ages')}>âge</button>
               <button role="tab" aria-selected={app.vue === 'recherche'} class:on={app.vue === 'recherche'} onclick={() => (app.vue = 'recherche')}>recherche</button>
+              <button role="tab" aria-selected={app.vue === 'doublons'} class:on={app.vue === 'doublons'} onclick={() => (app.vue = 'doublons')}>doublons</button>
             </div>
             {#if app.vue === 'arbre'}
               <Arbre {gen} mode={app.mode} pc={scan.pc} bind:tri={app.tri} bind:selection={app.selection} />
@@ -132,6 +134,8 @@
               <GrosFichiers {gen} mode={app.mode} bind:selection={app.selection} />
             {:else if app.vue === 'types'}
               <Types {gen} mode={app.mode} selection={app.selection} bind:portee={app.portee} />
+            {:else if app.vue === 'doublons'}
+              <Doublons {gen} mode={app.mode} bind:selection={app.selection} />
             {:else if app.vue === 'recherche'}
               <Recherche {gen} mode={app.mode} bind:selection={app.selection} />
             {:else}

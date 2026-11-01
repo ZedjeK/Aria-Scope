@@ -5,6 +5,7 @@
   import Icon from './Icon.svelte'
   import ConfirmerOperation from './ConfirmerOperation.svelte'
   import { app, call, message, toutDeselectionner } from './state.svelte.js'
+  import { cleMarque } from './selection.js'
   import { octets, nombre } from './format.js'
 
   let { gen, mode } = $props()
@@ -30,6 +31,14 @@
       .catch((err) => (erreur = message(err)))
   })
 
+  // Garde-fou des doublons : toutes les copies d'un même fichier ne partent
+  // jamais ensemble à la corbeille.
+  const groupesComplets = $derived.by(() => {
+    if (!app.doublons || app.doublons.gen !== gen || app.marques.length < 2) return []
+    const m = new Set(app.marques.map(cleMarque))
+    return app.doublons.groupes.filter((g) => g.cles.length > 1 && g.cles.every((k) => m.has(k)))
+  })
+
   // Déplacer ou copier : on choisit d'abord le dossier d'arrivée.
   async function transferer(operation) {
     erreur = ''
@@ -45,7 +54,7 @@
   function clavier(evt) {
     if (confirmer) return // la fenêtre de confirmation gère Échap
     if (evt.key === 'Escape' && app.marques.length > 0 && !evt.defaultPrevented) toutDeselectionner()
-    if (evt.key === 'Delete' && app.marques.length > 0 && !evt.target?.closest?.('input, textarea, select')) {
+    if (evt.key === 'Delete' && app.marques.length > 0 && groupesComplets.length === 0 && !evt.target?.closest?.('input, textarea, select')) {
       evt.preventDefault()
       confirmer = { operation: 'corbeille', destination: '' }
     }
@@ -69,6 +78,9 @@
           {#if resume.dossiers > 0}{nombre(resume.dossiers)} dossier{resume.dossiers > 1 ? 's' : ''}{' · '}{/if}{nombre(resume.fichiers)} fichier{resume.fichiers > 1 ? 's' : ''} concerné{resume.fichiers > 1 ? 's' : ''}
           {#if app.marques.length > resume.elements}{' · '}{nombre(app.marques.length - resume.elements)} déjà compris dans un dossier sélectionné{/if}
         </span>
+        {#if groupesComplets.length > 0}
+          <span class="bloque"><Icon name="shield" size={12} /> Toutes les copies de « {groupesComplets[0].nom} »{groupesComplets.length > 1 ? ` et de ${groupesComplets.length - 1} autre${groupesComplets.length > 2 ? 's' : ''}` : ''} sont sélectionnées : garde-en au moins une.</span>
+        {/if}
         {#if resume.filtre && resume.dossiers > 0}
           <span class="avert"><Icon name="warn" size={12} /> Analyse filtrée : les dossiers contiennent peut-être davantage que ce qui est compté ici.</span>
         {/if}
@@ -85,7 +97,7 @@
     <button class="action small" onclick={() => transferer('archiver')} title="Regrouper dans une archive .zip">
       <Icon name="archive" size={15} /> Archiver…
     </button>
-    <button class="corbeille small" onclick={() => (confirmer = { operation: 'corbeille', destination: '' })} title="Suppr">
+    <button class="corbeille small" disabled={groupesComplets.length > 0} onclick={() => (confirmer = { operation: 'corbeille', destination: '' })} title={groupesComplets.length > 0 ? 'Garde au moins une copie de chaque doublon' : 'Suppr'}>
       <Icon name="trash" size={15} /> Corbeille…
     </button>
   </div>
@@ -189,7 +201,17 @@
     font-size: 12px;
     font-weight: 600;
   }
-  .corbeille:hover {
+  .corbeille:disabled {
+    opacity: 0.4;
+  }
+  .bloque {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--danger);
+  }
+  .corbeille:hover:not(:disabled) {
     background: color-mix(in srgb, var(--danger) 22%, transparent);
   }
   .barre > button {

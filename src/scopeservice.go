@@ -36,6 +36,11 @@ type ScopeService struct {
 	genRecherche  int             // l'analyse sur laquelle elle porte
 	criteres      scan.Criteres
 	dansRecherche int32
+
+	doublons     *scan.Doublons // la dernière recherche de doublons
+	genDoublons  int
+	minDoublons  int64
+	dansDoublons int32
 }
 
 // Etat est ce que l'interface interroge régulièrement.
@@ -136,6 +141,9 @@ func (s *ScopeService) remplacer(nouveau *scan.Scan, attendu int64) {
 	s.gen++
 	if s.recherche != nil {
 		s.recherche.Arreter() // elle portait sur l'ancienne analyse
+	}
+	if s.doublons != nil {
+		s.doublons.Arreter()
 	}
 	s.mu.Unlock()
 	if ancien != nil {

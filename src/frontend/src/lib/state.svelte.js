@@ -31,6 +31,10 @@ export const app = $state({
     min: '', minUnite: 'Mo', max: '', maxUnite: 'Go',
     apres: '', avant: '', familles: [], cheminMin: '', portee: 'tout',
   },
+  // Onglet doublons : critères, et les groupes trouvés (clés de sélection)
+  // pour le garde-fou de la barre de ménage
+  critDoublons: { min: '1', unite: 'Mo', portee: 'tout' },
+  doublons: null, // { gen, groupes: [{ nom, cles: [...] }] }
   erreur: '',
   loadError: '',
 })

@@ -214,6 +214,46 @@ type tacheRecherche struct {
 	long   int // longueur du chemin du dossier
 }
 
+// dossiersSous dresse la liste des dossiers connus sous id (lui compris),
+// avec leur chemin, en sautant ce que le ménage a retiré ; visite (facultatif)
+// voit chacun passer. L'arbre n'est verrouillé que le temps de ce relevé : un
+// ménage peut avoir lieu pendant la relecture qui suit.
+func (s *Scan) dossiersSous(id int32, visite func(t tacheRecherche, depart *Dossier)) ([]tacheRecherche, error) {
+	s.arbre.RLock()
+	defer s.arbre.RUnlock()
+	depart, err := s.noeud(id)
+	if err != nil {
+		return nil, err
+	}
+	var pile, taches []tacheRecherche
+	if id == 0 && s.pc {
+		for _, c := range depart.enfants {
+			pile = append(pile, tacheRecherche{c, c.nom, longueur(c.nom)})
+		}
+	} else {
+		ch, err := s.chemin(id)
+		if err != nil {
+			return nil, err
+		}
+		pile = append(pile, tacheRecherche{depart, ch, longueur(ch)})
+	}
+	for len(pile) > 0 {
+		t := pile[len(pile)-1]
+		pile = pile[:len(pile)-1]
+		if t.d.retire {
+			continue
+		}
+		taches = append(taches, t)
+		if visite != nil {
+			visite(t, depart)
+		}
+		for _, e := range t.d.enfants {
+			pile = append(pile, tacheRecherche{e, filepath.Join(t.chemin, e.nom), t.long + 1 + longueur(e.nom)})
+		}
+	}
+	return taches, nil
+}
+
 // Chercher lance une recherche dans le dossier id (0 : toute l'analyse).
 // Les dossiers connus de l'analyse sont relus en parallèle ; les filtres de
 // l'analyse s'appliquent aussi, pour que les chiffres restent cohérents.
@@ -223,46 +263,13 @@ func (s *Scan) Chercher(id int32, c Criteres) (*Recherche, error) {
 		return nil, err
 	}
 
-	// L'arbre n'est lu que le temps de dresser la liste des dossiers : un
-	// ménage peut avoir lieu pendant la recherche.
-	var taches []tacheRecherche
 	var dossiersTrouves []trouve
-	err = func() error {
-		s.arbre.RLock()
-		defer s.arbre.RUnlock()
-		depart, err := s.noeud(id)
-		if err != nil {
-			return err
+	taches, err := s.dossiersSous(id, func(t tacheRecherche, depart *Dossier) {
+		if k.quoi != QuoiFichiers && t.d != depart && k.familles == nil &&
+			k.nomOK(t.d.nom) && k.tailleOK(t.d.taille) && k.dateOK(t.d.modif) && t.long >= k.cheminMin {
+			dossiersTrouves = append(dossiersTrouves, trouve{d: t.d, nom: t.d.nom, taille: t.d.taille, disque: t.d.disque, modif: t.d.modif, longueur: t.long})
 		}
-		var pile []tacheRecherche
-		if id == 0 && s.pc {
-			for _, c := range depart.enfants {
-				pile = append(pile, tacheRecherche{c, c.nom, longueur(c.nom)})
-			}
-		} else {
-			ch, err := s.chemin(id)
-			if err != nil {
-				return err
-			}
-			pile = append(pile, tacheRecherche{depart, ch, longueur(ch)})
-		}
-		for len(pile) > 0 {
-			t := pile[len(pile)-1]
-			pile = pile[:len(pile)-1]
-			if t.d.retire {
-				continue
-			}
-			taches = append(taches, t)
-			if k.quoi != QuoiFichiers && t.d != depart && k.familles == nil &&
-				k.nomOK(t.d.nom) && k.tailleOK(t.d.taille) && k.dateOK(t.d.modif) && t.long >= k.cheminMin {
-				dossiersTrouves = append(dossiersTrouves, trouve{d: t.d, nom: t.d.nom, taille: t.d.taille, disque: t.d.disque, modif: t.d.modif, longueur: t.long})
-			}
-			for _, e := range t.d.enfants {
-				pile = append(pile, tacheRecherche{e, filepath.Join(t.chemin, e.nom), t.long + 1 + longueur(e.nom)})
-			}
-		}
-		return nil
-	}()
+	})
 	if err != nil {
 		return nil, err
 	}
