@@ -247,8 +247,10 @@ func Archiver(sc *scan.Scan, cibles []scan.Cible, dest string, opts OptionsArchi
 		Fichiers: p.apercu.Fichiers, Octets: p.apercu.Taille,
 	}
 	go func() {
-		defer opMu.Unlock()
+		// Le verrou est rendu avant de signaler la fin : qui attend la fin
+		// peut aussitôt lancer une autre opération.
 		defer close(a.fini)
+		defer opMu.Unlock()
 		pointTest(PhaseEcriture)
 		b := a.executer(sc, p, opts, hwnd)
 		a.mu.Lock()
