@@ -25,6 +25,12 @@ export const app = $state({
   ancre: null, // point de départ d'une sélection Maj+clic
   revision: 0, // augmente à chaque ménage : les vues se rechargent
   bilan: null, // résultat de la dernière opération de ménage
+  // Critères de l'onglet recherche, gardés quand on change d'onglet
+  recherche: {
+    nom: '', regex: false, quoi: 'fichiers',
+    min: '', minUnite: 'Mo', max: '', maxUnite: 'Go',
+    apres: '', avant: '', familles: [], cheminMin: '', portee: 'tout',
+  },
   erreur: '',
   loadError: '',
 })

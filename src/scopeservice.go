@@ -31,6 +31,11 @@ type ScopeService struct {
 
 	archivage *menage.Archivage // le dernier lancé, en cours ou fini
 	journal   *journal.Journal  // nil si le dossier de configuration est introuvable
+
+	recherche     *scan.Recherche // la dernière lancée
+	genRecherche  int             // l'analyse sur laquelle elle porte
+	criteres      scan.Criteres
+	dansRecherche int32
 }
 
 // Etat est ce que l'interface interroge régulièrement.
@@ -129,6 +134,9 @@ func (s *ScopeService) remplacer(nouveau *scan.Scan, attendu int64) {
 	ancien := s.scan
 	s.scan, s.attendu = nouveau, attendu
 	s.gen++
+	if s.recherche != nil {
+		s.recherche.Arreter() // elle portait sur l'ancienne analyse
+	}
 	s.mu.Unlock()
 	if ancien != nil {
 		ancien.Arreter()
