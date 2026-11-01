@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.5 · Windows 10/11 x64 · licence MIT
+  <a href="../../releases/latest"><b>Télécharger la dernière version</b></a> · v0.6 · Windows 10/11 x64 · licence MIT
 </p>
 
 ## Ce qu'il fait
@@ -28,6 +28,9 @@
 | **Tout est relié** | Ce que tu sélectionnes dans l'arbre s'allume sur la carte et l'anneau, et l'inverse : l'arbre se déplie tout seul jusqu'à la bonne ligne |
 | **Plus gros fichiers** | Les 1 000 plus gros fichiers de l'analyse, relevés pendant le scan, triables, avec leur dossier ; un clic les retrouve dans l'arbre et sur la carte |
 | **Types et âge** | La répartition par famille (vidéos, archives, jeux, impression 3D…) et par extension, puis par date de modification, pour voir ce qui dort depuis des années. Pour toute l'analyse ou un seul dossier |
+| **Recherche** | Par nom (jokers `*.mkv ; IMG_*`, simple texte ou regex), taille, période de modification, type, longueur du chemin ; fichiers, dossiers ou les deux. Dans toute l'analyse ou un dossier, avec les filtres de l'analyse. Jusqu'à 10 000 résultats triables, et « tout sélectionner » pour un nettoyage en deux clics |
+| **Chemins trop longs** | Un clic trouve ce qui atteint 260 caractères, la limite historique de Windows au-delà de laquelle l'Explorateur, des sauvegardes ou de vieux logiciels décrochent, avec de quoi raccourcir |
+| **Doublons vérifiés** | Regroupés par taille, filtrés par une empreinte rapide, confirmés par un SHA-256 complet : un doublon annoncé est identique octet pour octet. Liens physiques écartés. Classés par place récupérable, avec présélection « garder le plus ancien », « le plus récent » ou « les copies de ce dossier » ; la dernière copie d'un groupe ne part jamais à la corbeille |
 | **Filtres** | Exclure des dossiers ou des fichiers (`node_modules`, `*.tmp`), ne garder que certains types (`*.mkv`), une regex, une taille ou une ancienneté minimales. Appliqués pendant le scan, donc tout reste cohérent ; un bandeau rappelle qu'une analyse est filtrée |
 | **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
 | **Fichiers à la demande** | Les fichiers d'un dossier sont relus au moment où tu les déplies : la liste reflète le disque, et la mémoire reste légère même sur un disque entier |
@@ -64,7 +67,6 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 ## Feuille de route
 
-- **Recherche** : recherche multicritère, chemins trop longs, doublons vérifiés par SHA-256
 - **Export et historique** : CSV, HTML, Excel, PDF, SQLite ; analyses sauvegardées et comparées
 - **Plus tard** : renommage en masse, menu contextuel, détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
 
