@@ -8,6 +8,7 @@
   import Ages from '../lib/Ages.svelte'
   import Recherche from '../lib/Recherche.svelte'
   import Doublons from '../lib/Doublons.svelte'
+  import Exporter from '../lib/Exporter.svelte'
   import PanneauFiltres from '../lib/PanneauFiltres.svelte'
   import BarreSelection from '../lib/BarreSelection.svelte'
   import BilanMenage from '../lib/BilanMenage.svelte'
@@ -21,6 +22,7 @@
   const attendu = $derived(app.etat?.attendu ?? 0)
   const avance = $derived(enCours && attendu > 0 ? Math.min(pourcent(scan.disque, attendu), 99) : null)
   const filtresScan = $derived(app.etat?.filtres) // ceux de l'analyse affichée
+  let exportOuvert = $state(false)
 </script>
 
 <section class="page">
@@ -120,13 +122,16 @@
       {#key gen}
         <div class="vue" class:avec-carte={app.carte}>
           <div class="col-arbre">
-            <div class="onglets" role="tablist" aria-label="Vue">
-              <button role="tab" aria-selected={app.vue === 'arbre'} class:on={app.vue === 'arbre'} onclick={() => (app.vue = 'arbre')}>arbre</button>
-              <button role="tab" aria-selected={app.vue === 'gros'} class:on={app.vue === 'gros'} onclick={() => (app.vue = 'gros')}>gros fichiers</button>
-              <button role="tab" aria-selected={app.vue === 'types'} class:on={app.vue === 'types'} onclick={() => (app.vue = 'types')}>types</button>
-              <button role="tab" aria-selected={app.vue === 'ages'} class:on={app.vue === 'ages'} onclick={() => (app.vue = 'ages')}>âge</button>
-              <button role="tab" aria-selected={app.vue === 'recherche'} class:on={app.vue === 'recherche'} onclick={() => (app.vue = 'recherche')}>recherche</button>
-              <button role="tab" aria-selected={app.vue === 'doublons'} class:on={app.vue === 'doublons'} onclick={() => (app.vue = 'doublons')}>doublons</button>
+            <div class="barre-vue">
+              <div class="onglets" role="tablist" aria-label="Vue">
+                <button role="tab" aria-selected={app.vue === 'arbre'} class:on={app.vue === 'arbre'} onclick={() => (app.vue = 'arbre')}>arbre</button>
+                <button role="tab" aria-selected={app.vue === 'gros'} class:on={app.vue === 'gros'} onclick={() => (app.vue = 'gros')}>gros fichiers</button>
+                <button role="tab" aria-selected={app.vue === 'types'} class:on={app.vue === 'types'} onclick={() => (app.vue = 'types')}>types</button>
+                <button role="tab" aria-selected={app.vue === 'ages'} class:on={app.vue === 'ages'} onclick={() => (app.vue = 'ages')}>âge</button>
+                <button role="tab" aria-selected={app.vue === 'recherche'} class:on={app.vue === 'recherche'} onclick={() => (app.vue = 'recherche')}>recherche</button>
+                <button role="tab" aria-selected={app.vue === 'doublons'} class:on={app.vue === 'doublons'} onclick={() => (app.vue = 'doublons')}>doublons</button>
+              </div>
+              <button class="exporter" onclick={() => (exportOuvert = true)} title="Exporter cette vue"><Icon name="download" size={15} /> Exporter…</button>
             </div>
             {#if app.vue === 'arbre'}
               <Arbre {gen} mode={app.mode} pc={scan.pc} bind:tri={app.tri} bind:selection={app.selection} />
@@ -160,6 +165,7 @@
         </div>
       {/key}
       <BarreSelection {gen} mode={app.mode} />
+      {#if exportOuvert}<Exporter {gen} onfermer={() => (exportOuvert = false)} />{/if}
     {/if}
   {/if}
 </section>
@@ -233,6 +239,31 @@
     flex-direction: column;
     gap: 8px;
     min-width: 0;
+  }
+  .barre-vue {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .exporter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px 0;
+    corner-shape: bevel;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .exporter:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   }
   .onglets {
     flex: none;
