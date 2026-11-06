@@ -31,7 +31,12 @@
     detail:
       "Un seul fichier .html, aux couleurs d'Aria : résumé, carte, plus gros dossiers, types, âge, plus gros fichiers, et les doublons s'ils ont été cherchés. Il s'ouvre dans n'importe quel navigateur, s'envoie tel quel et s'imprime en PDF.",
   }
-  const v = $derived(format === 'html' ? RAPPORT : (VUES[vue] ?? VUES.arbre))
+  const CLASSEUR = {
+    titre: 'un classeur Excel',
+    detail:
+      'Un onglet par vue : résumé, dossiers, plus gros fichiers, types, âge, et la recherche et les doublons s’ils ont été faits. Colonnes typées (nombres, dates, pourcentages), filtrables, en-tête figé.',
+  }
+  const v = $derived(format === 'html' ? RAPPORT : format === 'xlsx' ? CLASSEUR : (VUES[vue] ?? VUES.arbre))
   let profondeur = $state(3)
   let depart = $state(app.portee === 'selection' ? 'selection' : 'tout')
   let enCours = $state(false)
@@ -41,14 +46,15 @@
 
   onMount(() => premier?.focus())
 
-  const dans = $derived((vue === 'arbre' || format === 'html' ? depart : app.portee) === 'selection' && app.selection ? app.selection.id : 0)
+  const dans = $derived((vue === 'arbre' || format !== 'csv' ? depart : app.portee) === 'selection' && app.selection ? app.selection.id : 0)
 
   async function exporter() {
     enCours = true
     erreur = ''
     try {
       const options = { vue, mode: app.mode, tri: { colonne: '', inverse: false }, dans, profondeur }
-      const chemin = await call(format === 'html' ? 'ExporterHTML' : 'ExporterCSV', gen, options)
+      const methode = { csv: 'ExporterCSV', html: 'ExporterHTML', xlsx: 'ExporterXLSX' }[format]
+      const chemin = await call(methode, gen, options)
       if (chemin) fait = chemin
     } catch (err) {
       erreur = message(err)
@@ -89,6 +95,9 @@
             <button role="radio" aria-checked={format === 'html'} class="format" class:on={format === 'html'} onclick={() => (format = 'html')}>
               <strong>Rapport HTML</strong><span>tout · navigateur, PDF</span>
             </button>
+            <button role="radio" aria-checked={format === 'xlsx'} class="format" class:on={format === 'xlsx'} onclick={() => (format = 'xlsx')}>
+              <strong>Excel</strong><span>tout · un onglet par vue</span>
+            </button>
           </div>
         </div>
 
@@ -98,9 +107,9 @@
             <Portee {gen} selection={app.selection} bind:portee={depart} />
           </div>
           <p class="hint">Pour un PDF : ouvre le rapport, bouton « Imprimer · PDF » (ou Ctrl+P), imprimante « Microsoft Print to PDF ».</p>
-        {:else if vue === 'arbre'}
+        {:else if format === 'xlsx' || vue === 'arbre'}
           <label class="field">
-            <span class="field-label">Profondeur</span>
+            <span class="field-label">{format === 'xlsx' ? 'Onglet Dossiers' : 'Profondeur'}</span>
             <select bind:value={profondeur}>
               {#each PROFONDEURS as [p, texte] (p)}<option value={p}>{texte}</option>{/each}
             </select>
@@ -128,7 +137,7 @@
     <div class="actions">
       {#if fait}
         <button class="btn-ghost" onclick={montrer}><Icon name="folder" size={16} /> Montrer</button>
-        {#if format === 'html'}<button class="btn-ghost" onclick={ouvrir}><Icon name="external" size={16} /> Ouvrir</button>{/if}
+        {#if format !== 'csv'}<button class="btn-ghost" onclick={ouvrir}><Icon name="external" size={16} /> Ouvrir</button>{/if}
         <button class="btn-primary" onclick={() => onfermer?.()}>Fermer</button>
       {:else}
         <button class="btn-ghost" disabled={enCours} onclick={() => onfermer?.()}>Annuler</button>

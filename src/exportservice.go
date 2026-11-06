@@ -85,3 +85,31 @@ func (s *ScopeService) OuvrirFichier(chemin string) error {
 	}
 	return s.app.Browser.OpenFile(chemin)
 }
+
+// ExporterXLSX enregistre le classeur Excel du dossier o.Dans de l'analyse
+// gen : résumé, dossiers, gros fichiers, types, âge, et la recherche et les
+// doublons s'ils ont été faits sur cette analyse.
+func (s *ScopeService) ExporterXLSX(gen int, o export.Options) (string, error) {
+	sc, err := s.courant(gen)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	r, d := s.recherche, s.doublons
+	if s.genRecherche != gen {
+		r = nil
+	}
+	if s.genDoublons != gen {
+		d = nil
+	}
+	s.mu.Unlock()
+	chemin, err := s.choisirFichier("Enregistrer le classeur", export.NomFichier("Classeur", "xlsx", time.Now()), "Classeur Excel", "*.xlsx")
+	if err != nil || chemin == "" {
+		return "", err
+	}
+	err = export.Ecrire(chemin, func(w io.Writer) error { return export.ClasseurXLSX(w, sc, r, d, o, version, time.Now()) })
+	if err != nil {
+		return "", err
+	}
+	return chemin, nil
+}
