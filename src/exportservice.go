@@ -52,3 +52,36 @@ func (s *ScopeService) ExporterCSV(gen int, o export.Options) (string, error) {
 	}
 	return chemin, nil
 }
+
+// ExporterHTML enregistre le rapport HTML du dossier o.Dans de l'analyse gen
+// (0 : toute l'analyse). Les doublons y figurent s'ils ont été cherchés.
+func (s *ScopeService) ExporterHTML(gen int, o export.Options) (string, error) {
+	sc, err := s.courant(gen)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	d := s.doublons
+	if s.genDoublons != gen {
+		d = nil
+	}
+	s.mu.Unlock()
+	chemin, err := s.choisirFichier("Enregistrer le rapport", export.NomFichier("Rapport", "html", time.Now()), "Page web (rapport)", "*.html")
+	if err != nil || chemin == "" {
+		return "", err
+	}
+	err = export.Ecrire(chemin, func(w io.Writer) error { return export.RapportHTML(w, sc, d, o, version, time.Now()) })
+	if err != nil {
+		return "", err
+	}
+	return chemin, nil
+}
+
+// OuvrirFichier ouvre un fichier exporté avec le programme associé
+// (le navigateur pour un rapport).
+func (s *ScopeService) OuvrirFichier(chemin string) error {
+	if s.app == nil {
+		return errors.New("application non prête")
+	}
+	return s.app.Browser.OpenFile(chemin)
+}

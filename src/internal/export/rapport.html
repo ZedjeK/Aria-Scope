@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Aria Scope {{.Version}}">
+<title>Aria Scope · {{.Chemin}}</title>
+<style>
+  :root {
+    --bg: #030812; --surface: #06101f; --sunken: #040b17; --line: #1a2d4d; --line-soft: #12213a; --line-strong: #27406b;
+    --text: #ddebff; --muted: #93a8c8; --faint: #8197b8; --dim: #3b5378;
+    --accent: #7df9ff; --accent-2: #5c8bff; --action: #ff8a1f; --warn: #ffd166;
+    --display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.5 var(--mono); }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 48px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; }
+  .marque { font: 700 12px/1 var(--display); letter-spacing: 6px; color: var(--accent); text-transform: uppercase; }
+  .marque span { color: var(--action); }
+  h1 { margin: 8px 0 4px; font: 700 28px/1.2 var(--display); color: #fff; overflow-wrap: anywhere; }
+  h2 { margin: 0 0 12px; font: 700 13px/1 var(--display); letter-spacing: 3px; text-transform: uppercase; color: var(--accent); }
+  .meta { color: var(--muted); font-size: 12px; }
+  .meta strong { color: var(--text); font-weight: 600; }
+  button.imprimer { padding: 10px 16px; border: 1px solid var(--action); border-radius: 10px 0; background: transparent; color: var(--action); font: 600 12px var(--mono); cursor: pointer; }
+  button.imprimer:hover { background: rgba(255,138,31,.12); }
+  section { margin-top: 28px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px 0; }
+  .cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { padding: 12px 14px; background: var(--sunken); border: 1px solid var(--line-soft); border-radius: 10px 0; }
+  .stat small { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--faint); }
+  .stat b { display: block; margin-top: 4px; font: 700 20px/1.2 var(--display); color: #fff; }
+  .stat.principal b { color: var(--accent); }
+  .note { margin: 10px 0 0; color: var(--faint); font-size: 12px; }
+  svg.carte { display: block; width: 100%; height: auto; border-radius: 8px 0; background: var(--sunken); }
+  svg.carte text { font: 11px var(--mono); fill: #ddebff; pointer-events: none; }
+  svg.carte text.titre { font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 6px 8px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); text-align: left; border-bottom: 1px solid var(--line-strong); }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  th.n, td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.chemin { color: var(--faint); font-size: 11px; overflow-wrap: anywhere; }
+  td.nom { overflow-wrap: anywhere; }
+  tr.niv2 td.nom { padding-left: 26px; color: var(--muted); }
+  .barre { position: relative; height: 8px; min-width: 80px; background: var(--line-soft); border-radius: 4px; overflow: hidden; }
+  .barre i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 4px; }
+  .barre.orange i { background: var(--action); }
+  .barre.bleu i { background: var(--accent-2); }
+  .deux { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .deux > div { min-width: 0; }
+  .vide { color: var(--faint); }
+  footer { margin-top: 32px; color: var(--dim); font-size: 11px; text-align: center; }
+  @media (max-width: 760px) { .deux { grid-template-columns: 1fr; } }
+
+  /* Impression (et PDF) : fond clair, encre sombre, rien de coupé */
+  @media print {
+    :root { color-scheme: light; --text: #10182a; --muted: #3a4a66; --faint: #55657f; --dim: #7a879c; --line: #c9d3e3; --line-soft: #e1e7f0; --line-strong: #9fb0c8; --accent: #006f80; --action: #c45a00; --accent-2: #2850c8; }
+    @page { size: A4; margin: 14mm 12mm; }
+    body { background: #fff; color: var(--text); font-size: 10.5px; }
+    main { max-width: none; padding: 0 2px; } /* la bordure droite ne doit pas tomber sur le bord de la page */
+    h1 { color: #000; font-size: 22px; }
+    .stat { background: #f3f6fb; border-color: var(--line); }
+    .stat b { color: #000; }
+    .stat.principal b { color: var(--accent); }
+    section { background: none; border-color: var(--line); break-inside: avoid; page-break-inside: avoid; }
+    section.longue { break-inside: auto; page-break-inside: auto; }
+    tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+    button.imprimer { display: none; }
+    svg.carte { background: #f3f6fb; }
+    svg.carte rect.bloc { stroke: #fff; }
+    svg.carte text { fill: #10182a; }
+    .barre { background: #e6ebf3; }
+    .deux { grid-template-columns: 1fr 1fr; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="marque">Aria <span>Scope</span> · rapport</div>
+      <h1>{{.Chemin}}</h1>
+      <div class="meta">
+        Rapport du <strong>{{.Genere}}</strong>
+        {{if .Partiel}} · dossier de l'analyse de <strong>{{.Analyse}}</strong>{{end}}
+        · tailles {{if .ModeDisque}}<strong>sur disque</strong>{{else}}<strong>réelles</strong>{{end}}
+        · analyse en {{.Duree}}
+      </div>
+      {{if .Filtres}}<div class="meta">Analyse filtrée : {{.Filtres}}{{if .Ecartes}} · {{nombre .Ecartes}} fichiers écartés{{end}}</div>{{end}}
+    </div>
+    <button class="imprimer" type="button" onclick="window.print()" title="Pour un PDF, choisis « Microsoft Print to PDF » comme imprimante">Imprimer · PDF</button>
+  </header>
+
+  <section>
+    <h2>Résumé</h2>
+    <div class="cartes">
+      <div class="stat principal"><small>Taille réelle</small><b>{{lisible .Racine.Taille}}</b></div>
+      <div class="stat"><small>Sur disque</small><b>{{lisible .Racine.Disque}}</b></div>
+      <div class="stat"><small>Fichiers</small><b>{{nombre .Racine.Fichiers}}</b></div>
+      <div class="stat"><small>Dossiers</small><b>{{nombre .Racine.Dossiers}}</b></div>
+      <div class="stat"><small>Illisibles</small><b>{{nombre .Racine.Erreurs}}</b></div>
+      {{if .AvecDoublons}}<div class="stat"><small>Doublons récupérables</small><b>{{lisible .DblPlace}}</b></div>{{end}}
+    </div>
+  </section>
+
+  {{if .Carte}}
+  <section>
+    <h2>Carte</h2>
+    <svg class="carte" viewBox="0 0 {{f1 .CarteW}} {{f1 .CarteH}}" role="img" aria-label="Carte des dossiers, proportionnelle à leur taille">
+      {{range .Carte}}
+      <g>
+        <title>{{.Nom}} · {{.Taille}}</title>
+        <rect class="bloc" x="{{f1 .X}}" y="{{f1 .Y}}" width="{{f1 .W}}" height="{{f1 .H}}" fill="{{.Couleur}}" fill-opacity="{{f1 .Opacite}}" stroke="{{.Couleur}}" stroke-opacity="0.75" stroke-width="1"></rect>
+        {{if .Titre}}<text class="titre" x="{{f1 .X}}" y="{{f1 .Y}}" dx="5" dy="13" fill="{{.Couleur}}">{{.Nom}} · {{.Taille}}</text>
+        {{else if .Etiquette}}<text x="{{f1 .X}}" y="{{f1 .Y}}" dx="5" dy="14">{{.Nom}}</text><text x="{{f1 .X}}" y="{{f1 .Y}}" dx="5" dy="27" opacity="0.7">{{.Taille}}</text>{{end}}
+      </g>
+      {{end}}
+    </svg>
+    <p class="note">Chaque rectangle est proportionnel à la taille. En gris clair, les fichiers posés directement dans un dossier ; en gris sombre, les éléments trop petits pour être dessinés.</p>
+  </section>
+  {{end}}
+
+  <section class="longue">
+    <h2>Plus gros dossiers</h2>
+    {{if .Dossiers}}
+    <table>
+      <thead><tr><th>Dossier</th><th class="n">Taille</th><th style="width:22%">Part de l'ensemble</th><th class="n">Fichiers</th><th class="n">Modifié</th></tr></thead>
+      <tbody>
+      {{range .Dossiers}}
+        <tr class="niv{{.Niveau}}"><td class="nom" title="{{.Chemin}}">{{.Nom}}</td><td class="n">{{lisible .Valeur}}</td>
+          <td><div class="barre{{if eq .Niveau 2}} bleu{{end}}"><i style="width:{{barre .PartRacine}}%"></i></div></td>
+          <td class="n">{{nombre .Fichiers}}</td><td class="n">{{date .Modif}}</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+    <p class="note">Premier niveau, et en retrait les sous-dossiers qui pèsent au moins 1 % de l'ensemble.</p>
+    {{else}}<p class="vide">Aucun sous-dossier.</p>{{end}}
+  </section>
+
+  <section>
+    <div class="deux">
+      <div>
+        <h2>Types de fichiers</h2>
+        <table>
+          <thead><tr><th>Famille</th><th class="n">Taille</th><th style="width:34%">Part</th></tr></thead>
+          <tbody>
+          {{range .Familles}}<tr><td class="nom">{{.Nom}}</td><td class="n">{{lisible .Valeur}}</td><td><div class="barre"><i style="width:{{barre .Part}}%"></i></div></td></tr>{{end}}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Extensions les plus lourdes</h2>
+        <table>
+          <thead><tr><th>Extension</th><th class="n">Fichiers</th><th class="n">Taille</th><th class="n">Part</th></tr></thead>
+          <tbody>
+          {{range .Extensions}}<tr><td class="nom">{{.Nom}} <span class="vide">· {{.Detail}}</span></td><td class="n">{{nombre .Fichiers}}</td><td class="n">{{lisible .Valeur}}</td><td class="n">{{pct .Part}}</td></tr>{{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Âge des fichiers</h2>
+    <table>
+      <thead><tr><th>Dernière modification</th><th class="n">Fichiers</th><th class="n">Taille</th><th style="width:40%">Part</th></tr></thead>
+      <tbody>
+      {{range .Ages}}<tr><td class="nom">{{.Nom}}</td><td class="n">{{nombre .Fichiers}}</td><td class="n">{{lisible .Valeur}}</td><td><div class="barre orange"><i style="width:{{barre .Part}}%"></i></div></td></tr>{{end}}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="longue">
+    <h2>Plus gros fichiers</h2>
+    {{if .Gros}}
+    <table>
+      <thead><tr><th class="n">#</th><th>Fichier</th><th>Dossier</th><th class="n">Taille</th><th class="n">Modifié</th></tr></thead>
+      <tbody>
+      {{range $i, $g := .Gros}}<tr><td class="n">{{inc $i}}</td><td class="nom">{{$g.Nom}}</td><td class="chemin">{{$g.Dossier}}</td><td class="n">{{if $.ModeDisque}}{{lisible $g.Disque}}{{else}}{{lisible $g.Taille}}{{end}}</td><td class="n">{{date $g.Modif}}</td></tr>{{end}}
+      </tbody>
+    </table>
+    <p class="note">Les {{.GrosLimite}} plus gros au plus.</p>
+    {{else}}<p class="vide">Aucun fichier.</p>{{end}}
+  </section>
+
+  {{if .AvecDoublons}}
+  <section class="longue">
+    <h2>Doublons</h2>
+    {{if .Doublons}}
+    <p class="meta"><strong>{{nombre (int64 .DblGroupes)}}</strong> groupes de fichiers identiques (vérifiés par SHA-256) · <strong>{{nombre (int64 .DblCopies)}}</strong> copies en trop · <strong>{{lisible .DblPlace}}</strong> récupérables</p>
+    <table>
+      <thead><tr><th>Fichier</th><th class="n">Copies</th><th class="n">Taille</th><th class="n">Récupérable</th><th>Dossiers</th></tr></thead>
+      <tbody>
+      {{range .Doublons}}<tr><td class="nom">{{.Nom}}</td><td class="n">{{.Copies}}</td><td class="n">{{lisible .Taille}}</td><td class="n">{{lisible .Recuperable}}</td><td class="chemin">{{range $k, $d := .Dossiers}}{{if $k}}<br>{{end}}{{$d}}{{end}}</td></tr>{{end}}
+      </tbody>
+    </table>
+    {{else}}<p class="vide">Aucun doublon trouvé.</p>{{end}}
+  </section>
+  {{end}}
+
+  <footer>Rapport généré par Aria Scope {{.Version}} · un seul fichier, aucune donnée envoyée nulle part.</footer>
+</main>
+</body>
+</html>

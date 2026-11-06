@@ -25,7 +25,13 @@
   ]
 
   const vue = app.vue
-  const v = VUES[vue] ?? VUES.arbre
+  let format = $state('csv') // csv ou html
+  const RAPPORT = {
+    titre: 'un rapport',
+    detail:
+      "Un seul fichier .html, aux couleurs d'Aria : résumé, carte, plus gros dossiers, types, âge, plus gros fichiers, et les doublons s'ils ont été cherchés. Il s'ouvre dans n'importe quel navigateur, s'envoie tel quel et s'imprime en PDF.",
+  }
+  const v = $derived(format === 'html' ? RAPPORT : (VUES[vue] ?? VUES.arbre))
   let profondeur = $state(3)
   let depart = $state(app.portee === 'selection' ? 'selection' : 'tout')
   let enCours = $state(false)
@@ -35,13 +41,14 @@
 
   onMount(() => premier?.focus())
 
-  const dans = $derived((vue === 'arbre' ? depart : app.portee) === 'selection' && app.selection ? app.selection.id : 0)
+  const dans = $derived((vue === 'arbre' || format === 'html' ? depart : app.portee) === 'selection' && app.selection ? app.selection.id : 0)
 
   async function exporter() {
     enCours = true
     erreur = ''
     try {
-      const chemin = await call('ExporterCSV', gen, { vue, mode: app.mode, tri: { colonne: '', inverse: false }, dans, profondeur })
+      const options = { vue, mode: app.mode, tri: { colonne: '', inverse: false }, dans, profondeur }
+      const chemin = await call(format === 'html' ? 'ExporterHTML' : 'ExporterCSV', gen, options)
       if (chemin) fait = chemin
     } catch (err) {
       erreur = message(err)
@@ -51,6 +58,7 @@
   }
 
   const montrer = () => call('MontrerChemin', fait, true).catch((err) => (erreur = message(err)))
+  const ouvrir = () => call('OuvrirFichier', fait).catch((err) => (erreur = message(err)))
 
   function clavier(evt) {
     if (evt.key === 'Escape' && !enCours) {
@@ -75,13 +83,22 @@
         <div class="field">
           <span class="field-label">Format</span>
           <div class="formats" role="radiogroup" aria-label="Format">
-            <button role="radio" aria-checked="true" class="format on" bind:this={premier}>
-              <strong>CSV</strong><span>Excel, LibreOffice, scripts</span>
+            <button role="radio" aria-checked={format === 'csv'} class="format" class:on={format === 'csv'} bind:this={premier} onclick={() => (format = 'csv')}>
+              <strong>CSV</strong><span>cette vue · Excel, scripts</span>
+            </button>
+            <button role="radio" aria-checked={format === 'html'} class="format" class:on={format === 'html'} onclick={() => (format = 'html')}>
+              <strong>Rapport HTML</strong><span>tout · navigateur, PDF</span>
             </button>
           </div>
         </div>
 
-        {#if vue === 'arbre'}
+        {#if format === 'html'}
+          <div class="field">
+            <span class="field-label">Sur</span>
+            <Portee {gen} selection={app.selection} bind:portee={depart} />
+          </div>
+          <p class="hint">Pour un PDF : ouvre le rapport, bouton « Imprimer · PDF » (ou Ctrl+P), imprimante « Microsoft Print to PDF ».</p>
+        {:else if vue === 'arbre'}
           <label class="field">
             <span class="field-label">Profondeur</span>
             <select bind:value={profondeur}>
@@ -95,7 +112,9 @@
         {:else if (vue === 'types' || vue === 'ages') && app.portee === 'selection'}
           <p class="hint">Portée de l'onglet : le dossier sélectionné.</p>
         {/if}
-        <p class="hint">Tailles {app.mode === 'disque' ? 'sur disque' : 'réelles'}, en octets et lisibles ; séparateur « ; » et dates reconnues par Excel en français.</p>
+        {#if format === 'csv'}
+          <p class="hint">Tailles {app.mode === 'disque' ? 'sur disque' : 'réelles'}, en octets et lisibles ; séparateur « ; » et dates reconnues par Excel en français.</p>
+        {/if}
       </div>
     {:else}
       <div class="ok">
@@ -108,7 +127,8 @@
 
     <div class="actions">
       {#if fait}
-        <button class="btn-ghost" onclick={montrer}><Icon name="external" size={16} /> Montrer</button>
+        <button class="btn-ghost" onclick={montrer}><Icon name="folder" size={16} /> Montrer</button>
+        {#if format === 'html'}<button class="btn-ghost" onclick={ouvrir}><Icon name="external" size={16} /> Ouvrir</button>{/if}
         <button class="btn-primary" onclick={() => onfermer?.()}>Fermer</button>
       {:else}
         <button class="btn-ghost" disabled={enCours} onclick={() => onfermer?.()}>Annuler</button>
