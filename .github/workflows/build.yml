@@ -101,6 +101,8 @@ jobs:
           name: Aria-Scope-${{ steps.aria.outputs.version }}
           path: dist/
           if-no-files-found: error
+          # Le zip publié vit dans la release : l'artefact n'est qu'un dépannage.
+          retention-days: 7
 
       - name: Publier la release
         if: inputs.publier

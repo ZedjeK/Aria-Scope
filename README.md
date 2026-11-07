@@ -17,30 +17,66 @@
 
 ## Ce qu'il fait
 
+### Analyser
+
 | Fonction | Ce que ça fait |
 | --- | --- |
 | **Tout le PC, dès l'ouverture** | À son lancement, Aria Scope analyse tous tes disques internes et externes en même temps (pas les lecteurs réseau ni optiques) et les réunit sous « Ce PC ». Désactivable d'un clic sur la page des disques |
-| **Disques** | Tous tes lecteurs avec leur remplissage, pour analyser un seul disque. Ou un dossier précis, si tu sais déjà où chercher |
+| **Un disque ou un dossier** | Tous tes lecteurs avec leur remplissage, pour n'en analyser qu'un. Ou un dossier précis, si tu sais déjà où chercher |
 | **Scan parallèle** | Jusqu'à 32 dossiers lus en même temps, une seule requête par dossier pour obtenir toutes les tailles. Progression en direct, et un bouton pour arrêter quand tu veux |
+| **Filtres** | Exclure des dossiers ou des fichiers (`node_modules`, `*.tmp`), ne garder que certains types (`*.mkv`), une regex, une taille ou une ancienneté minimales. Appliqués pendant le scan, donc tout reste cohérent ; un bandeau rappelle qu'une analyse est filtrée |
+| **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
+
+### Explorer
+
+| Fonction | Ce que ça fait |
+| --- | --- |
 | **Arborescence triée** | Chaque dossier, du plus lourd au plus léger : taille, part de son parent, nombre de fichiers et de sous-dossiers, date du fichier le plus récent. Un clic sur un en-tête trie par n'importe quelle colonne |
 | **Treemap néon** | Chaque rectangle a la surface de ce qu'il pèse, une couleur par grande branche. Survol pour le détail, double-clic pour plonger dans un dossier, fil d'Ariane pour remonter |
 | **Anneau** | La répartition du dossier sélectionné entre ses 8 plus gros éléments ; un clic sur une part plonge dedans |
 | **Tout est relié** | Ce que tu sélectionnes dans l'arbre s'allume sur la carte et l'anneau, et l'inverse : l'arbre se déplie tout seul jusqu'à la bonne ligne |
 | **Plus gros fichiers** | Les 1 000 plus gros fichiers de l'analyse, relevés pendant le scan, triables, avec leur dossier ; un clic les retrouve dans l'arbre et sur la carte |
 | **Types et âge** | La répartition par famille (vidéos, archives, jeux, impression 3D…) et par extension, puis par date de modification, pour voir ce qui dort depuis des années. Pour toute l'analyse ou un seul dossier |
-| **Recherche** | Par nom (jokers `*.mkv ; IMG_*`, simple texte ou regex), taille, période de modification, type, longueur du chemin ; fichiers, dossiers ou les deux. Dans toute l'analyse ou un dossier, avec les filtres de l'analyse. Jusqu'à 10 000 résultats triables, et « tout sélectionner » pour un nettoyage en deux clics |
-| **Chemins trop longs** | Un clic trouve ce qui atteint 260 caractères, la limite historique de Windows au-delà de laquelle l'Explorateur, des sauvegardes ou de vieux logiciels décrochent, avec de quoi raccourcir |
-| **Doublons vérifiés** | Regroupés par taille, filtrés par une empreinte rapide, confirmés par un SHA-256 complet : un doublon annoncé est identique octet pour octet. Liens physiques écartés. Classés par place récupérable, avec présélection « garder le plus ancien », « le plus récent » ou « les copies de ce dossier » ; la dernière copie d'un groupe ne part jamais à la corbeille |
-| **Filtres** | Exclure des dossiers ou des fichiers (`node_modules`, `*.tmp`), ne garder que certains types (`*.mkv`), une regex, une taille ou une ancienneté minimales. Appliqués pendant le scan, donc tout reste cohérent ; un bandeau rappelle qu'une analyse est filtrée |
-| **Deux tailles** | La taille réelle des données, ou la place occupée sur le disque (clusters, compression, fichiers OneDrive restés en ligne) |
 | **Fichiers à la demande** | Les fichiers d'un dossier sont relus au moment où tu les déplies : la liste reflète le disque, et la mémoire reste légère même sur un disque entier |
 | **Explorateur** | Un clic sur ↗ ouvre le dossier, ou sélectionne le fichier, dans l'Explorateur Windows |
-| **Sélection multiple** | Ctrl+clic pour ajouter, Maj+clic pour étendre, dans l'arbre comme dans les plus gros fichiers. La barre de sélection donne le total, sans compter deux fois un fichier déjà compris dans un dossier sélectionné |
+
+### Chercher
+
+| Fonction | Ce que ça fait |
+| --- | --- |
+| **Recherche** | Par nom (jokers `*.mkv ; IMG_*`, simple texte ou regex), taille, période de modification, type, longueur du chemin ; fichiers, dossiers ou les deux. Dans toute l'analyse ou un dossier, avec les filtres de l'analyse. Jusqu'à 10 000 résultats triables, et « tout sélectionner » pour un nettoyage en deux clics |
+| **Chemins trop longs** | Un clic trouve ce qui atteint 260 caractères, la limite historique de Windows au-delà de laquelle l'Explorateur, des sauvegardes ou de vieux logiciels décrochent, avec de quoi raccourcir |
+| **Doublons vérifiés** | Regroupés par taille, filtrés par une empreinte rapide, confirmés par un SHA-256 complet : un doublon annoncé est identique octet pour octet. Liens physiques écartés. Classés par place récupérable, avec présélection « garder le plus ancien », « le plus récent » ou « les copies de ce dossier » |
+
+### Faire le ménage
+
+| Fonction | Ce que ça fait |
+| --- | --- |
+| **Sélection multiple** | Ctrl+clic pour ajouter, Maj+clic pour étendre, dans l'arbre, les plus gros fichiers, la recherche et les doublons. La barre de sélection donne le total, sans compter deux fois un fichier déjà compris dans un dossier sélectionné |
 | **Corbeille** | Touche Suppr ou bouton : un aperçu de ce qui part et de l'espace libéré, puis la corbeille de Windows. Jamais de suppression définitive ; sur une clé USB sans corbeille, Aria te prévient deux fois |
 | **Déplacer et copier** | Vers le dossier de ton choix, par l'Explorateur de Windows. L'aperçu vérifie la place disponible et signale les noms déjà pris |
 | **Archiver en .zip** | Un .zip standard, relu en entier avant d'être validé, avec une barre de progression et un bouton pour l'arrêter sans rien laisser derrière. En option, les originaux partent ensuite à la corbeille, seulement s'ils sont entièrement dans l'archive et n'ont pas bougé |
-| **Garde-fous** | Windows, Program Files, ProgramData, ton profil et ses dossiers AppData, les fichiers système à la racine : écartés d'office, avec la raison. L'analyse se met à jour toute seule après chaque opération, sans rescan |
+| **Garde-fous** | Windows, Program Files, ProgramData, ton profil et ses dossiers AppData, les fichiers système à la racine : écartés d'office, avec la raison. La dernière copie d'un doublon ne part jamais à la corbeille. L'analyse se met à jour toute seule après chaque opération, sans rescan |
 | **Journal et annulation** | Chaque opération est notée dans le journal. Un déplacement se remet en place, une copie part à la corbeille, les originaux d'une archive se restaurent depuis le .zip, même des semaines plus tard. Rien n'est jamais écrasé |
+
+### Exporter · *arrive en v0.7*
+
+| Fonction | Ce que ça fait |
+| --- | --- |
+| **CSV** | Chaque vue (arbre avec la profondeur de ton choix, gros fichiers, types, âge, recherche, doublons) en CSV qu'Excel en français ouvre d'un double-clic : séparateur « ; », virgule décimale, dates reconnues |
+| **Rapport HTML** | Un seul fichier autonome aux couleurs d'Aria : résumé, carte, plus gros dossiers, types, âge, plus gros fichiers, doublons. Il s'envoie tel quel, et s'imprime proprement en PDF |
+| **Classeur Excel** | Un .xlsx avec un onglet par vue, des colonnes typées (nombres, dates, pourcentages), l'en-tête figé et le filtre automatique |
+
+## Raccourcis
+
+| Geste | Effet |
+| --- | --- |
+| Ctrl+clic | Ajoute un élément à la sélection, ou l'en retire |
+| Maj+clic | Étend la sélection depuis le dernier élément cliqué |
+| Échap | Vide la sélection, ou ferme la fenêtre ouverte |
+| Suppr | Envoie la sélection à la corbeille, après confirmation |
+| Double-clic sur la carte | Plonge dans le dossier |
+| Double-clic sur un résultat ou un doublon | Le montre dans l'Explorateur |
 
 ## Installation
 
@@ -52,6 +88,7 @@
 - **Dossiers illisibles** : sans droits administrateur, certains dossiers système sont refusés. Aria les compte et les signale d'un ⚠ dans l'arborescence. Lancé en administrateur (clic droit → « Exécuter en tant qu'administrateur »), il en lira la plupart.
 - **Liens et jonctions** : ils ne sont pas suivis, pour ne rien compter deux fois. Windows en sème un peu partout (« Application Data », « Mes documents »…), ils apparaissent dans le compteur « liens ignorés ».
 - **Réglages et journal** : ils sont gardés dans `%APPDATA%\AriaScope` (`reglages.json`, `journal.json`, les 500 dernières opérations). L'exe, lui, reste portable.
+- **Rien ne sort de ton PC** : aucune connexion réseau, aucune télémétrie. Les exports s'écrivent là où tu les enregistres, et nulle part ailleurs.
 - **Annuler un envoi à la corbeille** : il se restaure depuis la corbeille de Windows (clic droit, « Restaurer ») ; le journal a un bouton pour l'ouvrir.
 - **Gros dossiers** : au-delà de 300 éléments, les plus légers sont regroupés sur une ligne « N autres éléments », pour que l'interface reste fluide même dans `WinSxS`.
 
@@ -65,10 +102,20 @@ Sur ton PC, avec Go 1.26 ou plus et Node.js LTS :
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
+Les tests du moteur (scan, recherche, doublons, ménage, journal, exports) se lancent depuis `src` :
+
+```powershell
+go test ./internal/...
+```
+
 ## Feuille de route
 
-- **Export et historique** : CSV, HTML, Excel, PDF, SQLite ; analyses sauvegardées et comparées
+- **v0.7 « Export et historique »** : les exports sont faits ; restent l'historique des analyses (gardées dans `%APPDATA%\AriaScope`) et leur comparaison, pour voir ce qui a grossi ou maigri
 - **Plus tard** : renommage en masse, menu contextuel, détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
+
+## Journal des versions
+
+Ce qui a changé à chaque version est dans le [CHANGELOG](CHANGELOG.md).
 
 ## Licence
 
