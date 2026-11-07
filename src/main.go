@@ -5,12 +5,14 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"aria-scope/internal/donnees"
 	"aria-scope/internal/journal"
 	"aria-scope/internal/reglages"
 	"aria-scope/internal/scan"
@@ -27,11 +29,15 @@ var version = "dev"
 
 func main() {
 	svc := &ScopeService{}
-	if m, err := reglages.Ouvrir(); err == nil {
-		svc.reglages = m
+	// Tout ce qu'Aria Scope garde est dans %USERPROFILE%\.Aria-Scope, comme pour
+	// les autres applis Aria (l'ancien %APPDATA%\AriaScope y est déplacé).
+	dossier, _, _ := donnees.Dossier()
+	if dossier != "" {
+		svc.reglages = reglages.Dans(dossier)
+		svc.journal = journal.Dans(dossier)
 	}
-	if j, err := journal.Ouvrir(); err == nil {
-		svc.journal = j
+	if exe, err := os.Executable(); err == nil {
+		go donnees.NettoyerAncienWebview(exe)
 	}
 	var window *application.WebviewWindow
 
@@ -41,6 +47,10 @@ func main() {
 		Icon:        appIcon,
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
+		Windows: application.WindowsOptions{
+			// Profil WebView2 rangé avec le reste, et non dans %APPDATA%.
+			WebviewUserDataPath: donnees.Webview(dossier),
+		},
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "io.github.zedjek.ariascope",
 			// Relancer l'exe ramène la fenêtre déjà ouverte au premier plan.
