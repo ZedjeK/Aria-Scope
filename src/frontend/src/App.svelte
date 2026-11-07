@@ -29,7 +29,7 @@
 <div class="shell">
   <nav class="sidebar" aria-label="Sections">
     <div class="brand">
-      <Logo size={56} actif={enCours} />
+      <Logo size={48} actif={enCours} />
       <span class="brand-name label"><span class="brand-top">ARIA</span><span class="brand-sub">SCOPE</span></span>
     </div>
 
