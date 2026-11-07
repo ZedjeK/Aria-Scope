@@ -1,7 +1,7 @@
 // Package journal garde la trace des opérations de ménage (corbeille,
 // déplacement, copie, archive) d'un lancement à l'autre, pour pouvoir les
-// retrouver et les annuler. Fichier : %APPDATA%\AriaScope\journal.json
-// (~/.config/AriaScope sous Linux).
+// retrouver et les annuler. Fichier : %USERPROFILE%\.Aria-Scope\journal.json
+// (voir internal/donnees).
 package journal
 
 import (
@@ -53,16 +53,7 @@ type Journal struct {
 	charge  bool
 }
 
-// Ouvrir prépare le journal dans le dossier de configuration de l'utilisateur.
-func Ouvrir() (*Journal, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
-	}
-	return Dans(filepath.Join(base, "AriaScope")), nil
-}
-
-// Dans prépare un journal dans un dossier précis (tests).
+// Dans prépare le journal dans un dossier (celui de internal/donnees).
 func Dans(dossier string) *Journal {
 	return &Journal{chemin: filepath.Join(dossier, "journal.json")}
 }
