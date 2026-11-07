@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="32" height="32">
-  <!-- Variante lisible en 16 à 48 px (barre des tâches) : traits épais, jumelles simplifiées. -->
+  <!-- Variante lisible en 16 à 24 px (petites icônes) : traits épais, jumelles simplifiées. -->
   <defs>
     <polygon id="a" points="28,138 68,24 92,24 132,138 108,138 80,58 52,138"/>
     <clipPath id="bl"><rect x="0" y="76" width="80" height="90"/></clipPath>
