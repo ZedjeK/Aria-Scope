@@ -9,6 +9,7 @@ Déjà sur la branche principale, pas encore publié :
 - **Export CSV** de chaque vue (arbre avec la profondeur de ton choix, gros fichiers, types, âge, recherche, doublons), prêt pour Excel en français : UTF-8 avec BOM, « ; », virgule décimale, dates reconnues. Un nom de fichier n'est jamais exécuté comme une formule.
 - **Rapport HTML** : un seul fichier autonome (résumé, carte, plus gros dossiers, types, âge, plus gros fichiers, doublons), avec une mise en page d'impression pour en faire un PDF.
 - **Classeur Excel (.xlsx)** écrit sans aucune dépendance : un onglet par vue, colonnes typées, en-tête figé et filtre automatique.
+- **Un seul dossier** : réglages, journal et cache de l'interface sont dans `%USERPROFILE%\.Aria-Scope`, comme pour les autres applis Aria. L'ancien `%APPDATA%\AriaScope` y est déplacé au premier lancement, et l'ancien cache de l'interface (`%APPDATA%\Aria-Scope.exe`) est supprimé.
 
 Reste à venir : l'historique des analyses et leur comparaison.
 

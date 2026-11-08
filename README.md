@@ -87,7 +87,7 @@
 
 - **Dossiers illisibles** : sans droits administrateur, certains dossiers système sont refusés. Aria les compte et les signale d'un ⚠ dans l'arborescence. Lancé en administrateur (clic droit → « Exécuter en tant qu'administrateur »), il en lira la plupart.
 - **Liens et jonctions** : ils ne sont pas suivis, pour ne rien compter deux fois. Windows en sème un peu partout (« Application Data », « Mes documents »…), ils apparaissent dans le compteur « liens ignorés ».
-- **Réglages et journal** : ils sont gardés dans `%APPDATA%\AriaScope` (`reglages.json`, `journal.json`, les 500 dernières opérations). L'exe, lui, reste portable.
+- **Réglages et journal** : ils sont gardés dans `%USERPROFILE%\.Aria-Scope` (`reglages.json`, `journal.json`, les 500 dernières opérations), avec le cache de l'interface (`webview`), comme pour les autres applis Aria. L'ancien dossier `%APPDATA%\AriaScope` y est déplacé au premier lancement. L'exe, lui, reste portable.
 - **Rien ne sort de ton PC** : aucune connexion réseau, aucune télémétrie. Les exports s'écrivent là où tu les enregistres, et nulle part ailleurs.
 - **Annuler un envoi à la corbeille** : il se restaure depuis la corbeille de Windows (clic droit, « Restaurer ») ; le journal a un bouton pour l'ouvrir.
 - **Gros dossiers** : au-delà de 300 éléments, les plus légers sont regroupés sur une ligne « N autres éléments », pour que l'interface reste fluide même dans `WinSxS`.
@@ -110,7 +110,7 @@ go test ./internal/...
 
 ## Feuille de route
 
-- **v0.7 « Export et historique »** : les exports sont faits ; restent l'historique des analyses (gardées dans `%APPDATA%\AriaScope`) et leur comparaison, pour voir ce qui a grossi ou maigri
+- **v0.7 « Export et historique »** : les exports sont faits ; restent l'historique des analyses (gardées dans `%USERPROFILE%\.Aria-Scope`) et leur comparaison, pour voir ce qui a grossi ou maigri
 - **Plus tard** : renommage en masse, menu contextuel, détails NTFS (dont le propriétaire des fichiers), ligne de commande et analyses planifiées, scan éclair via la MFT, version Linux
 
 ## Journal des versions

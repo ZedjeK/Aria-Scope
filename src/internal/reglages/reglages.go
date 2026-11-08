@@ -1,5 +1,5 @@
 // Package reglages garde les préférences d'Aria Scope d'un lancement à
-// l'autre, dans %APPDATA%\AriaScope\reglages.json (~/.config/AriaScope sous Linux).
+// l'autre, dans %USERPROFILE%\.Aria-Scope\reglages.json (voir internal/donnees).
 package reglages
 
 import (
@@ -26,16 +26,7 @@ type Magasin struct {
 	chemin string
 }
 
-// Ouvrir prépare le magasin dans le dossier de configuration de l'utilisateur.
-func Ouvrir() (*Magasin, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
-	}
-	return Dans(filepath.Join(base, "AriaScope")), nil
-}
-
-// Dans prépare un magasin dans un dossier précis (tests).
+// Dans prépare les réglages dans un dossier (celui de internal/donnees).
 func Dans(dossier string) *Magasin {
 	return &Magasin{chemin: filepath.Join(dossier, "reglages.json")}
 }
