@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -25,10 +26,16 @@ func terrainRapport(t *testing.T) string {
 	ecrire("Sauvegarde/vacances.mkv", film)
 	ecrire("Photos/2019/IMG_0001.jpg", make([]byte, 30000))
 	// Un nom piégé : il doit rester du texte dans le rapport.
-	ecrire(`Pièges/<script>alert("x")</script>.txt`, make([]byte, 100))
-	ecrire(`Pièges/<img src=x onerror=alert(1)>/a.txt`, make([]byte, 10))
+	if piegesPossibles() {
+		ecrire(`Pièges/<script>alert("x")</script>.txt`, make([]byte, 100))
+		ecrire(`Pièges/<img src=x onerror=alert(1)>/a.txt`, make([]byte, 10))
+	}
 	return r
 }
+
+// piegesPossibles : Windows interdit < > " dans un nom de fichier, les noms piégés ne peuvent exister que
+// sur les autres systèmes. Ces contrôles d'échappement tournent donc sous Linux (voir tests.yml).
+func piegesPossibles() bool { return runtime.GOOS != "windows" }
 
 func TestRapportHTML(t *testing.T) {
 	r := terrainRapport(t)
@@ -59,7 +66,7 @@ func TestRapportHTML(t *testing.T) {
 	if strings.Contains(h, "<script>alert") || strings.Contains(h, "<img src=x") {
 		t.Fatal("un nom de fichier a été injecté tel quel dans le HTML !")
 	}
-	if !strings.Contains(h, "&lt;script&gt;") && !strings.Contains(h, "&lt;img src=x") {
+	if piegesPossibles() && !strings.Contains(h, "&lt;script&gt;") && !strings.Contains(h, "&lt;img src=x") {
 		t.Error("les noms piégés devraient apparaître, échappés")
 	}
 	// Aucune ressource externe : le rapport se suffit à lui-même.

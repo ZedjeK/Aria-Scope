@@ -20,7 +20,13 @@ concurrency:
 
 jobs:
   tests:
-    runs-on: windows-latest
+    # Windows : la plateforme d'Aria Scope. Linux : les tests d'échappement des noms de fichiers piégés
+    # (< > " sont interdits dans un nom Windows) n'y ont de sens que là.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - name: Sources
