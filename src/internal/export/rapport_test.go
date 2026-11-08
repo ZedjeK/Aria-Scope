@@ -29,6 +29,9 @@ func terrainRapport(t *testing.T) string {
 	if piegesPossibles() {
 		ecrire(`Pièges/<script>alert("x")</script>.txt`, make([]byte, 100))
 		ecrire(`Pièges/<img src=x onerror=alert(1)>/a.txt`, make([]byte, 10))
+	} else {
+		// Même arborescence sous Windows : le dossier existe, avec un nom légal mais sensible en HTML.
+		ecrire(`Pièges/a&b.txt`, make([]byte, 100))
 	}
 	return r
 }
